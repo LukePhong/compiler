@@ -223,6 +223,14 @@ void IfElseStmt::output(int level)
     elseStmt->output(level + 4);
 }
 
+//q5参照if语句实现while循环
+void WhileStmt::output(int level)
+{
+    fprintf(yyout, "%*cWhileStmt\n", level, ' ');
+    cond->output(level + 4);
+    whileBodyStmt->output(level + 4);
+}
+
 // void ReturnStmt::output(int level)
 // {
 //     fprintf(yyout, "%*cReturnStmt\n", level, ' ');

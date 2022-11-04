@@ -42,7 +42,8 @@
 %token EQUAL_TO NOT_EQUAL_TO LESS_EQUAL GREATER_EQUAL 
 %token COMMA
 
-%nterm <stmttype> Stmts Stmt AssignStmt BlockStmt IfStmt ReturnStmt DeclStmt FuncDef DefStmt BreakStmt ContinueStmt //FuncParam FuncParamList
+%nterm <stmttype> Stmts Stmt AssignStmt BlockStmt IfStmt ReturnStmt DeclStmt FuncDef DefStmt BreakStmt ContinueStmt 
+                    WhileStmt //FuncParam FuncParamList
 %nterm <exprtype> Exp AddExp Cond LOrExp PrimaryExp LVal RelExp LAndExp UnaryExp MulExp
 %nterm <type> Type
 
@@ -84,9 +85,11 @@ Stmt
     | DeclStmt {$$=$1;}
     | FuncDef {$$=$1;}
     | DefStmt {$$=$1;}
+    // 单分号（空语句）
     | SEMICOLON {$$ = new EmptyStmt();}
     | BreakStmt {$$ = $1;}
     | ContinueStmt {$$ = $1;}
+    | WhileStmt {$$ = $1;}
     ;
 LVal
     : ID {
@@ -165,6 +168,26 @@ IfStmt
         $$ = new IfElseStmt($3, $5, $7);
     }
     ; */
+
+//q5参照if语句实现while循环
+While
+    :
+     /*建立新的符号表*/
+    WHILE{
+        identifiers = new SymbolTable(identifiers);
+    }
+    ;
+WhileStmt
+    :
+    While LPAREN Cond RPAREN Stmt {
+        //一对{}及其内部整体要算一个
+        $$ = new WhileStmt($3, $5);
+        //从符号表退出
+        SymbolTable *top = identifiers;
+        identifiers = identifiers->getPrev();
+        delete top;
+    }
+    ;
 
 
 //for循环参照函数形式实现

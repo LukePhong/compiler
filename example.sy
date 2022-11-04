@@ -17,8 +17,13 @@ int main()
         int b;
         b = (4 == 3 || 1)+5*-6-4;
         }
-    break;
-    continue;
+    while(a>3)
+        int a = 10;
+        //break;
+    while(a<5){
+        int a;
+        continue;
+    }
     a = 20;
     return 0;
 }

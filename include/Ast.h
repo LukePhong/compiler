@@ -168,6 +168,17 @@ public:
     void output(int level);
 };
 
+//q5参照if语句实现while循环
+class WhileStmt : public StmtNode
+{
+private:
+    ExprNode *cond;
+    StmtNode *whileBodyStmt;
+public:
+    WhileStmt(ExprNode *cond, StmtNode *whileBodyStmt) : cond(cond), whileBodyStmt(whileBodyStmt){};
+    void output(int level);
+};
+
 class ReturnStmt : public StmtNode
 {
 private:
