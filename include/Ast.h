@@ -128,24 +128,29 @@ public:
     void output(int level);
 };
 
+//q7支持连续定义/声明
 class DeclStmt : public StmtNode
 {
 private:
-    Id *id;
+    // Id *id;
+    std::vector<Id *> idList;
+    std::vector<ExprNode *> exprList;
 public:
-    DeclStmt(Id *id) : id(id){};
+    // DeclStmt(Id *id) : id(id){};
+    DeclStmt(){};
+    void addDecl(Id* next, ExprNode *exp = nullptr);
     void output(int level);
 };
-
-class DefStmt : public StmtNode
-{
-private:
-    Id *id;
-    ExprNode *expr;
-public:
-    DefStmt(Id *id, ExprNode *expr) : id(id), expr(expr){};
-    void output(int level);
-};
+//q7支持连续定义/声明
+// class DefStmt : public StmtNode
+// {
+// private:
+//     Id *id;
+//     ExprNode *expr;
+// public:
+//     DefStmt(Id *id, ExprNode *expr) : id(id), expr(expr){};
+//     void output(int level);
+// };
 
 class IfStmt : public StmtNode
 {

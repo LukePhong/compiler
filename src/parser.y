@@ -1,11 +1,22 @@
 %code top{
     #include <iostream>
     #include <assert.h>
+    // #include <vector>
+    #include <string>
+    using namespace std;
     #include "parser.h"
     extern FILE *yyout;
     extern Ast ast;
     int yylex();
     int yyerror( char const * );
+
+    struct tempDeclArray{
+        int level;
+        string name;
+        bool isDef = false;
+        void* exp = nullptr;
+    };
+    std::vector<tempDeclArray> tempDecl;
 }
 
 %code requires {
@@ -42,8 +53,8 @@
 %token EQUAL_TO NOT_EQUAL_TO LESS_EQUAL GREATER_EQUAL 
 %token COMMA
 
-%nterm <stmttype> Stmts Stmt AssignStmt BlockStmt IfStmt ReturnStmt DeclStmt FuncDef DefStmt BreakStmt ContinueStmt 
-                    WhileStmt //FuncParam FuncParamList
+%nterm <stmttype> Stmts Stmt AssignStmt BlockStmt IfStmt ReturnStmt DeclStmt FuncDef BreakStmt ContinueStmt 
+                    WhileStmt //FuncParam FuncParamList DefStmt
 %nterm <exprtype> Exp AddExp Cond LOrExp PrimaryExp LVal RelExp LAndExp UnaryExp MulExp
 %nterm <type> Type
 
@@ -84,7 +95,7 @@ Stmt
     | ReturnStmt {$$=$1;}
     | DeclStmt {$$=$1;}
     | FuncDef {$$=$1;}
-    | DefStmt {$$=$1;}
+    /* | DefStmt {$$=$1;} */
     // 单分号（空语句）
     | SEMICOLON {$$ = new EmptyStmt();}
     | BreakStmt {$$ = $1;}
@@ -526,7 +537,7 @@ Type
     ;
 
 
-DeclStmt
+/* DeclStmt
     :
     //这里不能替换成Decl
     Type ID SEMICOLON {
@@ -549,16 +560,71 @@ DeclStmt
         $$ = new DeclStmt(new Id(se));
         delete []$3;
     }
+    ; */
+//q7支持连续定义/声明
+DeclStmt
+    :
+    Type DeclBody SEMICOLON{
+        SymbolEntry *se;
+        auto n = new DeclStmt();
+        for(auto i:tempDecl){
+            se = new IdentifierSymbolEntry($1, i.name, i.level);
+            identifiers->install(i.name, se);            
+            //q3添加DefStmt变量常量定义语句
+            if(i.isDef)
+                n->addDecl(new Id(se), (ExprNode*)i.exp);
+            else
+                n->addDecl(new Id(se));
+        }
+        $$ = (StmtNode*)n;
+        std::vector<tempDeclArray>().swap(tempDecl);
+    }
+    //q2const常量支持
+    |CONST Type DeclBody SEMICOLON{
+        SymbolEntry *se;
+        auto n = new DeclStmt();
+        for(auto i:tempDecl){
+            se = new IdentifierSymbolEntry($2, i.name, i.level, SymbolEntry::CONSTANT);
+            identifiers->install(i.name, se);
+            //q3添加DefStmt变量常量定义语句
+            if(i.isDef)
+                n->addDecl(new Id(se), (ExprNode*)i.exp);
+            else
+                n->addDecl(new Id(se));
+        }
+        $$ = (StmtNode*)n;
+        std::vector<tempDeclArray>().swap(tempDecl);
+    }
     ;
-
+DeclBody
+    :
+    //没有赋值语句
+    DeclBody COMMA ID {
+        tempDecl.emplace_back(tempDeclArray{identifiers->getLevel(), $3});
+        delete []$3;
+    }
+    |ID {
+        tempDecl.emplace_back(tempDeclArray{identifiers->getLevel(), $1});
+        delete []$1;
+    }
+    //有赋值语句
+    |DeclBody COMMA ID ASSIGN Exp{
+        tempDecl.emplace_back(tempDeclArray{identifiers->getLevel(), $3, true, $5});
+        delete []$3;
+    }
+    |ID ASSIGN Exp{
+        tempDecl.emplace_back(tempDeclArray{identifiers->getLevel(), $1, true, $3});
+        delete []$1;
+    }
+    ;
+//q7支持连续定义/声明
 //q3添加DefStmt变量常量定义语句
-DefStmt
+/* DefStmt
     :
     Type ID ASSIGN Exp SEMICOLON {
         SymbolEntry *se;
         se = new IdentifierSymbolEntry($1, $2, identifiers->getLevel());
         identifiers->install($2, se);
-
         $$ = new DefStmt(new Id(se), $4);
         //符号表中保存了，原来开辟的空间就可以释放了
         delete []$2;
@@ -572,6 +638,43 @@ DefStmt
         delete []$3;
     }
     ;
+DefBody
+    :
+    DefBody COMMA ID ASSIGN Exp{
+
+    }
+    |DefBody COMMA ID{
+
+    }
+    |ID ASSIGN Exp{
+
+    }
+    |ID {
+
+    }
+    ; */
+
+
+//q3添加DefStmt变量常量定义语句
+/* DefStmt
+    :
+    Type ID ASSIGN Exp SEMICOLON {
+        SymbolEntry *se;
+        se = new IdentifierSymbolEntry($1, $2, identifiers->getLevel());
+        identifiers->install($2, se);
+        $$ = new DefStmt(new Id(se), $4);
+        //符号表中保存了，原来开辟的空间就可以释放了
+        delete []$2;
+    }
+    |
+    CONST Type ID ASSIGN Exp SEMICOLON {
+        SymbolEntry *se;
+        se = new IdentifierSymbolEntry($2, $3, identifiers->getLevel(), SymbolEntry::CONSTANT);
+        identifiers->install($3, se);
+        $$ = new DefStmt(new Id(se), $5);
+        delete []$3;
+    }
+    ; */
 
 FuncDef
     :

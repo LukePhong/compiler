@@ -187,31 +187,46 @@ void SeqNode::output(int level)
     }
 }
 
+void DeclStmt::addDecl(Id* next, ExprNode *exp){
+    idList.push_back(next);
+    exprList.push_back(exp);
+}
 void DeclStmt::output(int level)
 {
-    fprintf(yyout, "%*c", level, ' ');
-    // q2const常量支持
-    //不对const另立节点类型，而是直接输出
-    if(id->getSymbolEntry()->isConstant()){
-        fprintf(yyout, "Constant\t");
+    // fprintf(yyout, "DeclStmt\n");
+    // id->output(level + 4);
+    for (size_t i = 0; i < idList.size(); i++)
+    {
+        fprintf(yyout, "%*c", level, ' ');
+        // q2const常量支持
+        //不对const另立节点类型，而是直接输出
+        if(idList[i]->getSymbolEntry()->isConstant()){
+            fprintf(yyout, "Constant\t");
+        }
+        // expr存在
+        if(exprList[i]){
+            fprintf(yyout, "DefStmt\n");
+            idList[i]->output(level + 4);
+            exprList[i]->output(level + 4);
+        }else{
+            fprintf(yyout, "DeclStmt\n");
+            idList[i]->output(level + 4);
+        }
     }
-    fprintf(yyout, "DeclStmt\n");
-    id->output(level + 4);
-
+    
 }
-
-void DefStmt::output(int level)
-{
-    fprintf(yyout, "%*c", level, ' ');
-    // q2const常量支持
-    //不对const另立节点类型，而是直接输出
-    if(id->getSymbolEntry()->isConstant()){
-        fprintf(yyout, "Constant\t");
-    }
-    fprintf(yyout, "DefStmt\n");
-    id->output(level + 4);
-    expr->output(level + 4);
-}
+// void DefStmt::output(int level)
+// {
+//     fprintf(yyout, "%*c", level, ' ');
+//     // q2const常量支持
+//     //不对const另立节点类型，而是直接输出
+//     if(id->getSymbolEntry()->isConstant()){
+//         fprintf(yyout, "Constant\t");
+//     }
+//     fprintf(yyout, "DefStmt\n");
+//     id->output(level + 4);
+//     expr->output(level + 4);
+// }
 
 void IfStmt::output(int level)
 {
