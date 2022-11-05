@@ -106,6 +106,14 @@ BLOCKCOMMENTEND "*/"
         return INT;
     #endif
 }
+"float" {
+    //q6浮点数支持
+    #ifdef ONLY_FOR_LEX
+        DEBUG_FOR_LAB4("FLOAT\tfloat", yylineno, offset - yyleng);
+     #else
+        return FLT;
+    #endif
+}
 "void" {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("VOID\tvoid", yylineno, offset - yyleng);
@@ -379,6 +387,7 @@ BLOCKCOMMENTEND "*/"
             DEBUG_FOR_LAB4("FLOAT\t"+std::string(yytext), yylineno, offset - yyleng);
          #else
             sscanf(yytext, "%f", &yylval.ftype);
+            // printf("%f\n", yylval.ftype);
             return FLOAT;
         #endif
     }

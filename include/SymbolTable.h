@@ -3,8 +3,13 @@
 
 #include <string>
 #include <map>
+#include <cassert>
 
-class Type;
+#include "Type.h"
+
+// class Type;
+// class IntType;
+// class FloatType;
 
 class SymbolEntry
 {
@@ -40,12 +45,17 @@ public:
 class ConstantSymbolEntry : public SymbolEntry
 {
 private:
-    int value;
+    int value_int;
+    //q6浮点数支持
+    float value_float;
 
 public:
     ConstantSymbolEntry(Type *type, int value);
+    ConstantSymbolEntry(Type *type, float value);
     virtual ~ConstantSymbolEntry() {};
-    int getValue() const {return value;};
+    // int getValue() const {return value_int;};
+    int getValueInt() const;
+    float getValueFloat() const;
     std::string toStr();
     // You can add any function you need here.
 };

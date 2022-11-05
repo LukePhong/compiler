@@ -10,14 +10,37 @@ SymbolEntry::SymbolEntry(Type *type, int kind)
 
 ConstantSymbolEntry::ConstantSymbolEntry(Type *type, int value) : SymbolEntry(type, SymbolEntry::CONSTANT)
 {
-    this->value = value;
+    this->value_int = value;
 }
 
+//q6浮点数支持
+ConstantSymbolEntry::ConstantSymbolEntry(Type *type, float value) : SymbolEntry(type, SymbolEntry::CONSTANT)
+{
+    this->value_float = value;
+}
+
+//q6浮点数支持
 std::string ConstantSymbolEntry::toStr()
 {
     std::ostringstream buffer;
-    buffer << value;
+    // buffer << value_int;
+    if(type->isInt())
+        buffer << getValueInt();
+    else
+        buffer << getValueFloat();
     return buffer.str();
+}
+
+//q6浮点数支持
+int ConstantSymbolEntry::getValueInt() const
+{
+    assert(type->isInt());
+    return value_int;
+}
+float ConstantSymbolEntry::getValueFloat() const
+{
+    assert(type->isFloat());
+    return value_float;
 }
 
 IdentifierSymbolEntry::IdentifierSymbolEntry(Type *type, std::string name, int scope)

@@ -115,8 +115,13 @@ void Constant::output(int level)
     std::string type, value;
     type = symbolEntry->getType()->toStr();
     value = symbolEntry->toStr();
-    fprintf(yyout, "%*cIntegerLiteral\tvalue: %s\ttype: %s\n", level, ' ',
-            value.c_str(), type.c_str());
+    //q6浮点数支持
+    if(symbolEntry->getType()->isInt())
+        fprintf(yyout, "%*cIntegerLiteral\tvalue: %s\ttype: %s\n", level, ' ',
+                value.c_str(), type.c_str());
+    else
+        fprintf(yyout, "%*cFloatLiteral\tvalue: %s\ttype: %s\n", level, ' ',
+                value.c_str(), type.c_str());
 }
 
 void Id::output(int level)
