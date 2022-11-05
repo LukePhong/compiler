@@ -15,6 +15,8 @@
         string name;
         bool isDef = false;
         void* exp = nullptr;
+        void* dim = nullptr;
+        // std::vector<int> dim = {0};
     };
     std::vector<tempDeclArray> tempDecl;
 }
@@ -54,7 +56,7 @@
 %token COMMA
 
 %nterm <stmttype> Stmts Stmt AssignStmt BlockStmt IfStmt ReturnStmt DeclStmt FuncDef BreakStmt ContinueStmt 
-                    WhileStmt //FuncParam FuncParamList DefStmt
+                    WhileStmt DimArray //FuncParam FuncParamList DefStmt
 %nterm <exprtype> Exp AddExp Cond LOrExp PrimaryExp LVal RelExp LAndExp UnaryExp MulExp
 %nterm <type> Type
 
@@ -230,81 +232,8 @@ ReturnStmt
         $$ = new ReturnStmt(nullptr);
     }
     ;
-/* ReturnStmt
-    :
-    RETURN Exp SEMICOLON{
-        $$ = new ReturnStmt($2);
-    }
-    ; */
 
 
-/* Exp
-    :
-    AddExp {$$ = $1;}
-    ;
-Cond
-    :
-    LOrExp {$$ = $1;}
-    ;
-
-PrimaryExp
-    :
-    LVal {
-        $$ = $1;
-    }
-    | INTEGER {
-        SymbolEntry *se = new ConstantSymbolEntry(TypeSystem::intType, $1);
-        $$ = new Constant(se);
-    }
-    ;
-AddExp
-    :
-    PrimaryExp {$$ = $1;}
-    |
-    AddExp ADD PrimaryExp
-    {
-        SymbolEntry *se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        $$ = new BinaryExpr(se, BinaryExpr::ADD, $1, $3);
-    }
-    |
-    AddExp SUB PrimaryExp
-    {
-        SymbolEntry *se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        $$ = new BinaryExpr(se, BinaryExpr::SUB, $1, $3);
-    }
-    ;
-
-
-RelExp
-    :
-    AddExp {$$ = $1;}
-    |
-    RelExp LESS AddExp
-    {
-        SymbolEntry *se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        $$ = new BinaryExpr(se, BinaryExpr::LESS, $1, $3);
-    }
-    ;
-LAndExp
-    :
-    RelExp {$$ = $1;}
-    |
-    LAndExp AND RelExp
-    {
-        SymbolEntry *se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        $$ = new BinaryExpr(se, BinaryExpr::AND, $1, $3);
-    }
-    ;
-LOrExp
-    :
-    LAndExp {$$ = $1;}
-    |
-    LOrExp OR LAndExp
-    {
-        SymbolEntry *se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        $$ = new BinaryExpr(se, BinaryExpr::OR, $1, $3);
-    }
-    ; */
 Exp
     :
     LOrExp {$$ = $1;}
@@ -572,9 +501,16 @@ DeclStmt
             identifiers->install(i.name, se);            
             //q3添加DefStmt变量常量定义语句
             if(i.isDef)
-                n->addDecl(new Id(se), (ExprNode*)i.exp);
+                //q8数组支持
+                if(i.dim)
+                    n->addDecl(new Id(se), (ExprNode*)i.exp, (DimArray*)i.dim);
+                else
+                    n->addDecl(new Id(se), (ExprNode*)i.exp);
             else
-                n->addDecl(new Id(se));
+                if(i.dim)
+                    n->addDecl(new Id(se), nullptr, (DimArray*)i.dim);
+                else
+                    n->addDecl(new Id(se));
         }
         $$ = (StmtNode*)n;
         std::vector<tempDeclArray>().swap(tempDecl);
@@ -588,9 +524,16 @@ DeclStmt
             identifiers->install(i.name, se);
             //q3添加DefStmt变量常量定义语句
             if(i.isDef)
-                n->addDecl(new Id(se), (ExprNode*)i.exp);
+                //q8数组支持
+                if(i.dim)
+                    n->addDecl(new Id(se), (ExprNode*)i.exp, (DimArray*)i.dim);
+                else
+                    n->addDecl(new Id(se), (ExprNode*)i.exp);
             else
-                n->addDecl(new Id(se));
+                if(i.dim)
+                    n->addDecl(new Id(se), nullptr, (DimArray*)i.dim);
+                else
+                    n->addDecl(new Id(se));
         }
         $$ = (StmtNode*)n;
         std::vector<tempDeclArray>().swap(tempDecl);
@@ -599,12 +542,22 @@ DeclStmt
 DeclBody
     :
     //没有赋值语句
-    DeclBody COMMA ID {
+    DeclBody COMMA ID{
         tempDecl.emplace_back(tempDeclArray{identifiers->getLevel(), $3});
         delete []$3;
     }
-    |ID {
+    |ID{
         tempDecl.emplace_back(tempDeclArray{identifiers->getLevel(), $1});
+        delete []$1;
+    }
+    |
+    //q8数组支持
+    DeclBody COMMA ID DimArray{
+        tempDecl.emplace_back(tempDeclArray{identifiers->getLevel(), $3, false, nullptr, $4});
+        delete []$3;
+    }
+    |ID DimArray{
+        tempDecl.emplace_back(tempDeclArray{identifiers->getLevel(), $1, false, nullptr, $2});
         delete []$1;
     }
     //有赋值语句
@@ -616,44 +569,28 @@ DeclBody
         tempDecl.emplace_back(tempDeclArray{identifiers->getLevel(), $1, true, $3});
         delete []$1;
     }
+    /* | DeclArray LSQUARE Exp RBRACE
+    | DeclArray */
     ;
-//q7支持连续定义/声明
-//q3添加DefStmt变量常量定义语句
-/* DefStmt
-    :
-    Type ID ASSIGN Exp SEMICOLON {
-        SymbolEntry *se;
-        se = new IdentifierSymbolEntry($1, $2, identifiers->getLevel());
-        identifiers->install($2, se);
-        $$ = new DefStmt(new Id(se), $4);
-        //符号表中保存了，原来开辟的空间就可以释放了
-        delete []$2;
+DimArray
+    :DimArray LSQUARE Exp RSQUARE{
+        auto dimArr = (DimArray*)$1;
+        dimArr->addDim((ExprNode*)$3);
+        $$ = (StmtNode*) dimArr;
     }
-    |
-    CONST Type ID ASSIGN Exp SEMICOLON {
-        SymbolEntry *se;
-        se = new IdentifierSymbolEntry($2, $3, identifiers->getLevel(), SymbolEntry::CONSTANT);
-        identifiers->install($3, se);
-        $$ = new DefStmt(new Id(se), $5);
-        delete []$3;
+    |LSQUARE Exp RSQUARE{
+        auto dim = new DimArray();
+        dim->addDim((ExprNode*)$2);
+        $$ = (StmtNode*) dim;
     }
     ;
-DefBody
-    :
-    DefBody COMMA ID ASSIGN Exp{
 
-    }
-    |DefBody COMMA ID{
-
-    }
-    |ID ASSIGN Exp{
-
-    }
-    |ID {
-
+/* DeclArray
+    : ID LSQUARE Exp RBRACE{
+        tempDecl.emplace_back(tempDeclArray{identifiers->getLevel(), $1, true, $3, {$3->}});
+        delete []$1;
     }
     ; */
-
 
 //q3添加DefStmt变量常量定义语句
 /* DefStmt

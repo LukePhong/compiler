@@ -91,9 +91,9 @@ private:
     std::string name;
     int scope;
     // You can add any field you need here.
-    //q2const常量支持
-    // float not supported!
-    // int value;
+    //错了，我们语法分析时根本不知道这里是几维，因为里面可能是表达式等，无法在此时计算
+    //默认是0维
+    // std::vector<int> dimensions;
 
 public:
     IdentifierSymbolEntry(Type *type, std::string name, int scope);
@@ -103,8 +103,8 @@ public:
     std::string toStr();
     int getScope() const {return scope;};
     // You can add any function you need here.
-    //q2const常量支持
-    // int getValue() const {return value;};
+    // void addDimension(int d);
+    // void setDimension(std::vector<int> d){dimensions = d;};
 };
 
 

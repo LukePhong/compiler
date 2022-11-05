@@ -60,8 +60,6 @@ public:
 
 
 
-
-
 class Constant : public ExprNode
 {
 public:
@@ -78,6 +76,17 @@ public:
 
 class StmtNode : public Node
 {};
+
+//q8数组支持
+class DimArray : public StmtNode
+{
+private:
+    std::vector<ExprNode*> dimList;
+public:
+    DimArray(){};
+    void addDim(ExprNode* next);
+    void output(int level);
+};
 
 class EmptyStmt : public StmtNode
 {
@@ -135,10 +144,11 @@ private:
     // Id *id;
     std::vector<Id *> idList;
     std::vector<ExprNode *> exprList;
+    std::vector<DimArray *> dimArrayList;
 public:
     // DeclStmt(Id *id) : id(id){};
     DeclStmt(){};
-    void addDecl(Id* next, ExprNode *exp = nullptr);
+    void addDecl(Id* next, ExprNode *exp = nullptr, DimArray *dim = nullptr);
     void output(int level);
 };
 //q7支持连续定义/声明

@@ -186,10 +186,23 @@ void SeqNode::output(int level)
         stmt->output(level + 4);
     }
 }
+//q8数组支持
+void DimArray::addDim(ExprNode* next)
+{
+    dimList.push_back(next);
+}
+void DimArray::output(int level)
+{
+    fprintf(yyout, "%*cArray Dimension List\n", level, ' ');
+    for(auto expr : dimList){
+        expr->output(level + 4);
+    }
+}
 
-void DeclStmt::addDecl(Id* next, ExprNode *exp){
+void DeclStmt::addDecl(Id* next, ExprNode *exp, DimArray *dim){
     idList.push_back(next);
     exprList.push_back(exp);
+    dimArrayList.push_back(dim);
 }
 void DeclStmt::output(int level)
 {
@@ -211,6 +224,10 @@ void DeclStmt::output(int level)
         }else{
             fprintf(yyout, "DeclStmt\n");
             idList[i]->output(level + 4);
+        }
+        //q8数组支持
+        if(dimArrayList[i]){
+            dimArrayList[i]->output(level + 4);
         }
     }
     

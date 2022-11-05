@@ -57,10 +57,14 @@ IdentifierSymbolEntry::IdentifierSymbolEntry(Type *type, std::string name, int s
     this->scope = scope;
 }
 
-// IdentifierSymbolEntry::IdentifierSymbolEntry(Type *type, std::string name, int scope, int value) : SymbolEntry(type, SymbolEntry::VARIABLE), 
-//                                                                                                     name(name), value(value)
-// {
-//     this->scope = scope;
+// void IdentifierSymbolEntry::addDimension(int d){
+//     assert(d > 0);
+//     if(dimensions[0] == 0){
+//         std::vector<int>().swap(dimensions);
+//         dimensions = {d};
+//     }else{
+//         dimensions.push_back(d);
+//     }
 // }
 
 std::string IdentifierSymbolEntry::toStr()
