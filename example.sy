@@ -1,6 +1,6 @@
 int a;
 
-int main(int xx, float b)
+int main(float x[], int xx[][1][2][3], float b)
 {
     //const int a;
     //int a[4][2] = {};

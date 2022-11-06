@@ -57,7 +57,7 @@
 %token COMMA
 
 %nterm <stmttype> Stmts Stmt AssignStmt BlockStmt IfStmt ReturnStmt DeclStmt FuncDef BreakStmt ContinueStmt 
-                    WhileStmt DimArray ArrayDefBlock ArrayDef FuncParam //FuncParamList DefStmt
+                    WhileStmt DimArray ArrayDefBlock ArrayDef FuncParam //ArrayParam//FuncParamList DefStmt
 %nterm <exprtype> Exp AddExp Cond LOrExp PrimaryExp LVal RelExp LAndExp UnaryExp MulExp
 %nterm <type> Type
 
@@ -715,7 +715,86 @@ FuncParam
         $$ = (StmtNode*)p;
         delete []$2;
     }
-
+    //q11参数列表数组支持
+    //一维
+    |Type ID LSQUARE RSQUARE { 
+        //新增符号表项
+        SymbolEntry *se;
+        auto n = new DeclStmt();
+        auto p = new FuncParam();
+        if ($1->isInt()){
+            tempParaType.push_back(TypeSystem::arrayIntType);
+            se = new IdentifierSymbolEntry(TypeSystem::arrayIntType, $2, identifiers->getLevel());
+        }
+        else{
+            tempParaType.push_back(TypeSystem::arrayFloatType);
+            se = new IdentifierSymbolEntry(TypeSystem::arrayFloatType, $2, identifiers->getLevel());
+        }
+        identifiers->install($2, se);     
+        n->addDecl(new Id(se));
+        p->addNext(n);
+        $$ = (StmtNode*)p;
+        delete []$2;
+    }
+    //多维
+    |Type ID LSQUARE RSQUARE DimArray { 
+        //新增符号表项
+        SymbolEntry *se;
+        auto n = new DeclStmt();
+        auto p = new FuncParam();
+        if ($1->isInt()){
+            tempParaType.push_back(TypeSystem::arrayIntType);
+            se = new IdentifierSymbolEntry(TypeSystem::arrayIntType, $2, identifiers->getLevel());
+        }
+        else{
+            tempParaType.push_back(TypeSystem::arrayFloatType);
+            se = new IdentifierSymbolEntry(TypeSystem::arrayFloatType, $2, identifiers->getLevel());
+        }
+        identifiers->install($2, se);     
+        n->addDecl(new Id(se), nullptr, (DimArray*)$5);
+        p->addNext(n);
+        $$ = (StmtNode*)p;
+        delete []$2;
+    }
+    |FuncParam COMMA Type ID LSQUARE RSQUARE { 
+        //新增符号表项
+        SymbolEntry *se;
+        auto n = new DeclStmt();
+        auto p = (FuncParam*)$1;
+        if ($3->isInt()){
+            tempParaType.push_back(TypeSystem::arrayIntType);
+            se = new IdentifierSymbolEntry(TypeSystem::arrayIntType, $4, identifiers->getLevel());
+        }
+        else{
+            tempParaType.push_back(TypeSystem::arrayFloatType);
+            se = new IdentifierSymbolEntry(TypeSystem::arrayFloatType, $4, identifiers->getLevel());
+        }
+        identifiers->install($4, se);     
+        n->addDecl(new Id(se));
+        p->addNext(n);
+        $$ = (StmtNode*)p;
+        delete []$4;
+    }
+    |FuncParam COMMA Type ID LSQUARE RSQUARE DimArray { 
+        //新增符号表项
+        SymbolEntry *se;
+        auto n = new DeclStmt();
+        auto p = (FuncParam*)$1;
+        // se = new IdentifierSymbolEntry($3, $4, identifiers->getLevel());
+        if ($3->isInt()){
+            tempParaType.push_back(TypeSystem::arrayIntType);
+            se = new IdentifierSymbolEntry(TypeSystem::arrayIntType, $4, identifiers->getLevel());
+        }
+        else{
+            tempParaType.push_back(TypeSystem::arrayFloatType);
+            se = new IdentifierSymbolEntry(TypeSystem::arrayFloatType, $4, identifiers->getLevel());
+        }
+        identifiers->install($4, se);     
+        n->addDecl(new Id(se), nullptr, (DimArray*)$7);
+        p->addNext(n);
+        $$ = (StmtNode*)p;
+        delete []$4;
+    }
     |%empty {}
     ;
 

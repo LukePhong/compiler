@@ -8,7 +8,7 @@ class Type
 private:
     int kind;
 protected:
-    enum {BOOL, INT, FLOAT, VOID, FUNC};
+    enum {BOOL, INT, FLOAT, VOID, FUNC, ARRAY_INT, ARRAY_FLOAT};
 public:
     Type(int kind) : kind(kind) {};
     virtual ~Type() {};
@@ -21,6 +21,8 @@ public:
     bool isFloat() const {return kind == FLOAT;};
     //输出kind
     int getKind() { return (int)kind; };
+    //q11参数列表数组支持
+    // bool isFloat() const {return kind == FLOAT;};
 };
 
 class IntType : public Type
@@ -31,6 +33,12 @@ public:
     IntType(int size) : Type(Type::INT), size(size){};
     std::string toStr();
 };
+class ArrayIntType : public Type
+{
+public:
+    ArrayIntType() : Type(Type::ARRAY_INT){};
+    std::string toStr();
+};
 
 //q6浮点数支持
 class FloatType : public Type
@@ -39,6 +47,12 @@ private:
     int size;
 public:
     FloatType(int size) : Type(Type::FLOAT), size(size){};
+    std::string toStr();
+};
+class ArrayFloatType : public Type
+{
+public:
+    ArrayFloatType() : Type(Type::ARRAY_FLOAT){};
     std::string toStr();
 };
 
@@ -77,11 +91,15 @@ private:
     static FloatType commonFloat;
     static VoidType commonVoid;
     static BoolType commonBool;
+    static ArrayIntType commonArrayInt;
+    static ArrayFloatType commonArrayFloat;
 public:
     static Type *intType;
     static Type *floatType;
     static Type *voidType;
     static Type *boolType;
+    static Type *arrayIntType;
+    static Type *arrayFloatType;
 };
 
 #endif
