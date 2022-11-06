@@ -198,16 +198,44 @@ void DimArray::output(int level)
         expr->output(level + 4);
     }
 }
+//q9数组定义
+void ArrayDef::addDef(ArrayDef* def)
+{
+    arrDefList.push_back(def);
+}
+void ArrayDef::output(int level)
+{
+    fprintf(yyout, "%*cArray Definition List\n", level, ' ');
+    if(expr){
+        expr->output(level + 4);
+        return;
+    }
+    for(auto itm : arrDefList){
+        itm->output(level + 4);
+    }
+}
+//q9数组定义
+// void ArrayItem::addExpr(ExprNode* exp)
+// {
+//     exprList.push_back(exp);
+// }
+// void ArrayItem::output(int level)
+// {
+//     // fprintf(yyout, "%*cArray Dimension List\n", level, ' ');
+//     for(auto expr : exprList){
+//         expr->output(level + 4);
+//     }
+// }
 
-void DeclStmt::addDecl(Id* next, ExprNode *exp, DimArray *dim){
+
+void DeclStmt::addDecl(Id* next, ExprNode *exp, DimArray *dim, ArrayDef *defList){
     idList.push_back(next);
     exprList.push_back(exp);
     dimArrayList.push_back(dim);
+    defArrList.push_back(defList);
 }
 void DeclStmt::output(int level)
 {
-    // fprintf(yyout, "DeclStmt\n");
-    // id->output(level + 4);
     for (size_t i = 0; i < idList.size(); i++)
     {
         fprintf(yyout, "%*c", level, ' ');
@@ -228,6 +256,10 @@ void DeclStmt::output(int level)
         //q8数组支持
         if(dimArrayList[i]){
             dimArrayList[i]->output(level + 4);
+        }
+        //q9数组定义
+        if(defArrList[i]){
+            defArrList[i]->output(level + 4);
         }
     }
     

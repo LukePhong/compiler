@@ -88,6 +88,32 @@ public:
     void output(int level);
 };
 
+//q9数组定义
+class ArrayDef : public StmtNode
+{
+private:
+    std::vector<ArrayDef*> arrDefList;
+    //使用叶节点来保存Expr指针
+    ExprNode* expr = nullptr;
+public:
+    ArrayDef(){};
+    void addDef(ArrayDef* def);
+    void setLeaf(ExprNode* e){ expr = e;};
+    ExprNode* getLeaf() { return expr; };
+    void output(int level);
+};
+//q9数组定义
+// class ArrayItem : public StmtNode
+// {
+// private:
+//     std::vector<ExprNode*> exprList;
+    
+// public:
+//     ArrayItem(){};
+//     void addExpr(ExprNode* exp);
+//     void output(int level);
+// };
+
 class EmptyStmt : public StmtNode
 {
 public:
@@ -145,10 +171,12 @@ private:
     std::vector<Id *> idList;
     std::vector<ExprNode *> exprList;
     std::vector<DimArray *> dimArrayList;
+    //q9数组定义
+    std::vector<ArrayDef *> defArrList;
 public:
     // DeclStmt(Id *id) : id(id){};
     DeclStmt(){};
-    void addDecl(Id* next, ExprNode *exp = nullptr, DimArray *dim = nullptr);
+    void addDecl(Id* next, ExprNode *exp = nullptr, DimArray *dim = nullptr, ArrayDef *defList = nullptr);
     void output(int level);
 };
 //q7支持连续定义/声明

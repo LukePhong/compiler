@@ -16,9 +16,10 @@
         bool isDef = false;
         void* exp = nullptr;
         void* dim = nullptr;
-        // std::vector<int> dim = {0};
+        void* defArr = nullptr;
     };
     std::vector<tempDeclArray> tempDecl;
+
 }
 
 %code requires {
@@ -56,7 +57,7 @@
 %token COMMA
 
 %nterm <stmttype> Stmts Stmt AssignStmt BlockStmt IfStmt ReturnStmt DeclStmt FuncDef BreakStmt ContinueStmt 
-                    WhileStmt DimArray //FuncParam FuncParamList DefStmt
+                    WhileStmt DimArray ArrayDefBlock ArrayDef //FuncParam FuncParamList DefStmt
 %nterm <exprtype> Exp AddExp Cond LOrExp PrimaryExp LVal RelExp LAndExp UnaryExp MulExp
 %nterm <type> Type
 
@@ -141,6 +142,7 @@ BlockStmt
             $$ = new CompoundStmt(nullptr);
         }
     ;
+
 
 //q4if-else无大括号单声明/定义语句避错
 //如果不这样那么刚读入if它不知道该执行哪个大括号，会冲突报错
@@ -503,7 +505,12 @@ DeclStmt
             if(i.isDef)
                 //q8数组支持
                 if(i.dim)
-                    n->addDecl(new Id(se), (ExprNode*)i.exp, (DimArray*)i.dim);
+                    if(i.defArr){
+                        // printf("hello\n");
+                        n->addDecl(new Id(se), (ExprNode*)i.exp, (DimArray*)i.dim, (ArrayDef*)i.defArr);
+                    }
+                    else
+                        n->addDecl(new Id(se), (ExprNode*)i.exp, (DimArray*)i.dim);
                 else
                     n->addDecl(new Id(se), (ExprNode*)i.exp);
             else
@@ -526,7 +533,10 @@ DeclStmt
             if(i.isDef)
                 //q8数组支持
                 if(i.dim)
-                    n->addDecl(new Id(se), (ExprNode*)i.exp, (DimArray*)i.dim);
+                    if(i.defArr)
+                        n->addDecl(new Id(se), (ExprNode*)i.exp, (DimArray*)i.dim, (ArrayDef*)i.defArr);
+                    else
+                        n->addDecl(new Id(se), (ExprNode*)i.exp, (DimArray*)i.dim);
                 else
                     n->addDecl(new Id(se), (ExprNode*)i.exp);
             else
@@ -569,8 +579,16 @@ DeclBody
         tempDecl.emplace_back(tempDeclArray{identifiers->getLevel(), $1, true, $3});
         delete []$1;
     }
-    /* | DeclArray LSQUARE Exp RBRACE
-    | DeclArray */
+    |DeclBody COMMA ID DimArray ASSIGN ArrayDefBlock{
+        assert($6 != nullptr);
+        tempDecl.emplace_back(tempDeclArray{identifiers->getLevel(), $3, true, nullptr, $4, $6});
+        delete []$3;
+    }
+    |ID DimArray ASSIGN ArrayDefBlock{
+        assert($4 != nullptr);
+        tempDecl.emplace_back(tempDeclArray{identifiers->getLevel(), $1, true, nullptr, $2, $4});
+        delete []$1;
+    }
     ;
 DimArray
     :DimArray LSQUARE Exp RSQUARE{
@@ -582,6 +600,36 @@ DimArray
         auto dim = new DimArray();
         dim->addDim((ExprNode*)$2);
         $$ = (StmtNode*) dim;
+    }
+    ;
+//q9数组定义
+ArrayDef
+    : ArrayDef COMMA ArrayDefBlock{
+        // 向defArray中push
+        auto a = (ArrayDef *)$1;
+        a->addDef((ArrayDef *)$3);
+        $$ = (StmtNode*)a;
+    }
+    | ArrayDefBlock{
+        auto n = new ArrayDef();
+        n->addDef((ArrayDef *)$1);
+        $$ = (StmtNode*)n;
+    }
+    ;
+ArrayDefBlock
+    :Exp    {
+        // 新开辟一个只有leaf的ArrayDef
+        auto n = new ArrayDef();
+        n->setLeaf($1);
+        $$ = (StmtNode*)n;
+    }
+    |LBRACE ArrayDef RBRACE{
+        $$ = $2;
+    }
+    |LBRACE RBRACE  {
+        // 新开辟一个leaf是nullptr的ArrayDef
+        auto n = new ArrayDef();
+        $$ = (StmtNode*)n;
     }
     ;
 
