@@ -4,26 +4,27 @@ int main()
 {
     //const int a;
     int a,b=12.5,c[10][12],d;
-    a = 1.2 + 2.3;
-    if(a < 5)
-        //return 1;
-        {int a = 2;}
-    else
-    /*{
-        int b =13;
-        a = 5;
-    }*/
-        {int a = 1.2;
-        const int b[1][1][1][5.6*-6.3-4.0],c,d,f=37.6;
-        b = (4.5 == 3.5 || 1.2)+5.6*-6.3-4.0;
-        }
-    while(a>3)
-        int a = 10;
-        //break;
-    while(a<5){
-        int a;
-        continue;
-    }
-    a = 20.5;
+    b = (4.5 == 3.5 || 1.2)+5.6*-6.3-4.0;
+    //a = 1.2 + 2.3;
+    //if(a < 5)
+    //    //return 1;
+    //    {int a = 2;}
+    //else
+    ///*{
+    //    int b =13;
+    //    a = 5;
+    //}*/
+    //    {int a = 1.2;
+    //    const int b[1][1][1][5.6*-6.3-4.0],c,d,f=37.6;
+    //    b = (4.5 == 3.5 || 1.2)+5.6*-6.3-4.0;
+    //    }
+    //while(a>3)
+    //    int a = 10;
+    //    //break;
+    //while(a<5){
+    //    int a;
+    //    continue;
+    //}
+    //a = 20.5;
     return 0;
 }

@@ -246,11 +246,11 @@ LOrExp
     |
     LOrExp LOGIC_OR LAndExp
     {
-         SymbolEntry *se;
-        if($1->getSymbolEntry()->getType()->isInt())
-            se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        else
-            se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
+        SymbolEntry *se;
+        //if($1->getSymbolEntry()->getType()->isInt())
+        //    se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
+        //else
+        se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
         $$ = new BinaryExpr(se, BinaryExpr::LOGIC_OR, $1, $3);
     }
     ;
@@ -261,11 +261,11 @@ LAndExp
     |
     LAndExp LOGIC_AND RelExp
     {
-         SymbolEntry *se;
-        if($1->getSymbolEntry()->getType()->isInt())
-            se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        else
-            se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
+        SymbolEntry *se;
+        //if($1->getSymbolEntry()->getType()->isInt())
+        //    se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
+        //else
+        se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
         $$ = new BinaryExpr(se, BinaryExpr::LOGIC_AND, $1, $3);
     }
     ;
@@ -277,60 +277,60 @@ RelExp
     RelExp LESS AddExp
     {
          SymbolEntry *se;
-        if($1->getSymbolEntry()->getType()->isInt())
-            se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        else
-            se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
+        //if($1->getSymbolEntry()->getType()->isInt())
+        //    se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
+        //else
+        se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
         $$ = new BinaryExpr(se, BinaryExpr::LESS, $1, $3);
     }
     |
     RelExp GREATER AddExp
     {
          SymbolEntry *se;
-        if($1->getSymbolEntry()->getType()->isInt())
-            se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        else
-            se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
+        //if($1->getSymbolEntry()->getType()->isInt())
+        //    se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
+        //else
+        se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
         $$ = new BinaryExpr(se, BinaryExpr::GREATER, $1, $3);
     }
     |
     RelExp LESS_EQUAL AddExp
     {
         SymbolEntry *se;
-        if($1->getSymbolEntry()->getType()->isInt())
-            se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        else
-            se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
+        //if($1->getSymbolEntry()->getType()->isInt())
+        //    se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
+        //else
+        se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
         $$ = new BinaryExpr(se, BinaryExpr::LESS_EQUAL, $1, $3);
     }
     |
     RelExp GREATER_EQUAL AddExp
     {
         SymbolEntry *se;
-        if($1->getSymbolEntry()->getType()->isInt())
-            se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        else
-            se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
+        //if($1->getSymbolEntry()->getType()->isInt())
+        //    se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
+        //else
+        se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
         $$ = new BinaryExpr(se, BinaryExpr::GREATER_EQUAL, $1, $3);
     }
     |
     RelExp EQUAL_TO AddExp
     {
         SymbolEntry *se;
-        if($1->getSymbolEntry()->getType()->isInt())
-            se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        else
-            se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
+        //if($1->getSymbolEntry()->getType()->isInt())
+        //    se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
+        //else
+        se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
         $$ = new BinaryExpr(se, BinaryExpr::EQUAL_TO, $1, $3);
     }
     |
     RelExp NOT_EQUAL_TO AddExp
     {
         SymbolEntry *se;
-        if($1->getSymbolEntry()->getType()->isInt())
-            se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        else
-            se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
+        //if($1->getSymbolEntry()->getType()->isInt())
+        //    se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
+        //else
+        se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
         $$ = new BinaryExpr(se, BinaryExpr::NOT_EQUAL_TO, $1, $3);
     }
     ;
@@ -348,7 +348,7 @@ AddExp
     AddExp ADD MulExp
     {
         SymbolEntry *se;
-        if($1->getSymbolEntry()->getType()->isInt())
+        if($1->getSymbolEntry()->getType()->isInt() && $3->getSymbolEntry()->getType()->isInt())
             se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
         else
             se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
@@ -358,7 +358,7 @@ AddExp
     AddExp SUB MulExp
     {
         SymbolEntry *se;
-        if($1->getSymbolEntry()->getType()->isInt())
+        if($1->getSymbolEntry()->getType()->isInt() && $3->getSymbolEntry()->getType()->isInt())
             se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
         else
             se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
@@ -373,7 +373,7 @@ MulExp
     MulExp PRODUCT UnaryExp
     {
         SymbolEntry *se;
-        if($1->getSymbolEntry()->getType()->isInt())
+        if($1->getSymbolEntry()->getType()->isInt() && $3->getSymbolEntry()->getType()->isInt())
             se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
         else
             se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
@@ -383,7 +383,7 @@ MulExp
     MulExp DIVISION UnaryExp
     {
         SymbolEntry *se;
-        if($1->getSymbolEntry()->getType()->isInt())
+        if($1->getSymbolEntry()->getType()->isInt() && $3->getSymbolEntry()->getType()->isInt())
             se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
         else
             se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
@@ -393,7 +393,7 @@ MulExp
     MulExp REMAINDER UnaryExp
     {
         SymbolEntry *se;
-        if($1->getSymbolEntry()->getType()->isInt())
+        if($1->getSymbolEntry()->getType()->isInt() && $3->getSymbolEntry()->getType()->isInt())
             se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
         else
             se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
@@ -423,10 +423,10 @@ UnaryExp
         //q6浮点数支持
         // SymbolEntry *se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
         SymbolEntry *se;
-        if($2->getSymbolEntry()->getType()->isInt())
-            se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        else
-            se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
+        //if($2->getSymbolEntry()->getType()->isInt())
+        se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
+        //else
+            //se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
         $$ = new UnaryExpr(se, UnaryExpr::LOGIC_NOT, $2);
     }
     ;
