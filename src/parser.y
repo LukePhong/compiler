@@ -19,7 +19,7 @@
         void* defArr = nullptr;
     };
     std::vector<tempDeclArray> tempDecl;
-
+    std::vector<Type*> tempParaType;
 }
 
 %code requires {
@@ -57,7 +57,7 @@
 %token COMMA
 
 %nterm <stmttype> Stmts Stmt AssignStmt BlockStmt IfStmt ReturnStmt DeclStmt FuncDef BreakStmt ContinueStmt 
-                    WhileStmt DimArray ArrayDefBlock ArrayDef //FuncParam FuncParamList DefStmt
+                    WhileStmt DimArray ArrayDefBlock ArrayDef FuncParam //FuncParamList DefStmt
 %nterm <exprtype> Exp AddExp Cond LOrExp PrimaryExp LVal RelExp LAndExp UnaryExp MulExp
 %nterm <type> Type
 
@@ -350,20 +350,20 @@ AddExp
     AddExp ADD MulExp
     {
         SymbolEntry *se;
-        if($1->getSymbolEntry()->getType()->isInt() && $3->getSymbolEntry()->getType()->isInt())
-            se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        else
-            se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
+        // if($1->getSymbolEntry()->getType()->isInt() && $3->getSymbolEntry()->getType()->isInt())
+        //     se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
+        // else
+        //     se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
+        int k1 = $1->getSymbolEntry()->getType()->getKind(),k2 = $3->getSymbolEntry()->getType()->getKind();
+        se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
         $$ = new BinaryExpr(se, BinaryExpr::ADD, $1, $3);
     }
     |
     AddExp SUB MulExp
     {
         SymbolEntry *se;
-        if($1->getSymbolEntry()->getType()->isInt() && $3->getSymbolEntry()->getType()->isInt())
-            se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        else
-            se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
+        int k1 = $1->getSymbolEntry()->getType()->getKind(),k2 = $3->getSymbolEntry()->getType()->getKind();
+        se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
         $$ = new BinaryExpr(se, BinaryExpr::SUB, $1, $3);
     }
     ;
@@ -375,30 +375,24 @@ MulExp
     MulExp PRODUCT UnaryExp
     {
         SymbolEntry *se;
-        if($1->getSymbolEntry()->getType()->isInt() && $3->getSymbolEntry()->getType()->isInt())
-            se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        else
-            se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
+        int k1 = $1->getSymbolEntry()->getType()->getKind(),k2 = $3->getSymbolEntry()->getType()->getKind();
+        se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
         $$ = new BinaryExpr(se, BinaryExpr::PRODUCT, $1, $3);
     }
     |
     MulExp DIVISION UnaryExp
     {
         SymbolEntry *se;
-        if($1->getSymbolEntry()->getType()->isInt() && $3->getSymbolEntry()->getType()->isInt())
-            se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        else
-            se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
+        int k1 = $1->getSymbolEntry()->getType()->getKind(),k2 = $3->getSymbolEntry()->getType()->getKind();
+        se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
         $$ = new BinaryExpr(se, BinaryExpr::DIVISION, $1, $3);
     }
     |
     MulExp REMAINDER UnaryExp
     {
         SymbolEntry *se;
-        if($1->getSymbolEntry()->getType()->isInt() && $3->getSymbolEntry()->getType()->isInt())
-            se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        else
-            se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
+        int k1 = $1->getSymbolEntry()->getType()->getKind(),k2 = $3->getSymbolEntry()->getType()->getKind();
+        se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
         $$ = new BinaryExpr(se, BinaryExpr::REMAINDER, $1, $3);
     }
     ;
@@ -668,25 +662,63 @@ FuncDef
         funcType = new FunctionType($1,{});
         SymbolEntry *se = new IdentifierSymbolEntry(funcType, $2, identifiers->getLevel());
         identifiers->install($2, se);
-
-        // 输出符号表项地址
-        // fprintf(yyout, "%s-%x%x\n", $2, ((unsigned int*)&se)[1], ((unsigned int*)&se)[0]);
-
+        //新建一层符号表
         identifiers = new SymbolTable(identifiers);
     }
-    LPAREN RPAREN
+    //q10添加参数列表
+    LPAREN FuncParam {
+        SymbolEntry *se;
+        se = identifiers->lookup($2);
+        assert(se != nullptr);
+        ((FunctionType*)(se->getType()))->setParamsType(tempParaType);
+        std::vector<Type*>().swap(tempParaType); 
+    } RPAREN
     BlockStmt
     {
         SymbolEntry *se;
         se = identifiers->lookup($2);
         assert(se != nullptr);
-        $$ = new FunctionDef(se, $6);
+        $$ = new FunctionDef(se, $5, $8);
         SymbolTable *top = identifiers;
         identifiers = identifiers->getPrev();
         delete top;
         delete []$2;
     }
     ;
+//q10添加参数列表
+FuncParam
+    :FuncParam COMMA Type ID{
+        //新增符号表项
+        SymbolEntry *se;
+        auto n = new DeclStmt();
+        auto p = (FuncParam*)$1;
+        se = new IdentifierSymbolEntry($3, $4, identifiers->getLevel());
+        identifiers->install($4, se);     
+        n->addDecl(new Id(se));
+        //改写参数类型临时向量
+        tempParaType.push_back($3);
+        p->addNext(n);
+        $$ = (StmtNode*)p;
+        delete []$4;
+    }
+    |Type ID{ 
+        //新增符号表项
+        SymbolEntry *se;
+        auto n = new DeclStmt();
+        auto p = new FuncParam();
+        se = new IdentifierSymbolEntry($1, $2, identifiers->getLevel());
+        identifiers->install($2, se);     
+        n->addDecl(new Id(se));
+        // 改写参数类型临时向量
+        tempParaType.push_back($1);
+        p->addNext(n);
+        $$ = (StmtNode*)p;
+        delete []$2;
+    }
+
+    |%empty {}
+    ;
+
 %%
 
 int yyerror(char const* message)

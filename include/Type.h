@@ -8,7 +8,7 @@ class Type
 private:
     int kind;
 protected:
-    enum {INT, FLOAT, VOID, FUNC, BOOL};
+    enum {BOOL, INT, FLOAT, VOID, FUNC};
 public:
     Type(int kind) : kind(kind) {};
     virtual ~Type() {};
@@ -19,6 +19,8 @@ public:
     bool isBool() const {return kind == BOOL;};
     //q6浮点数支持
     bool isFloat() const {return kind == FLOAT;};
+    //输出kind
+    int getKind() { return (int)kind; };
 };
 
 class IntType : public Type
@@ -63,8 +65,9 @@ private:
     std::vector<Type*> paramsType;
 public:
     FunctionType(Type* returnType, std::vector<Type*> paramsType) : 
-    Type(Type::FUNC), returnType(returnType), paramsType(paramsType){};
+        Type(Type::FUNC), returnType(returnType), paramsType(paramsType){};
     std::string toStr();
+    void setParamsType(std::vector<Type*> params) {paramsType = params;};
 };
 
 class TypeSystem

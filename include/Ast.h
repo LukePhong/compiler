@@ -245,9 +245,21 @@ class FunctionDef : public StmtNode
 {
 private:
     SymbolEntry *se;
+    //q10添加参数列表
+    StmtNode *params = nullptr;
     StmtNode *stmt;
 public:
-    FunctionDef(SymbolEntry *se, StmtNode *stmt) : se(se), stmt(stmt){};
+    FunctionDef(SymbolEntry *se, StmtNode *params, StmtNode *stmt) : se(se), params(params), stmt(stmt){};
+    void output(int level);
+};
+//q10添加参数列表
+class FuncParam : public StmtNode
+{
+private:
+    std::vector<StmtNode*> paramList;
+public:
+    FuncParam(){};
+    void addNext(StmtNode* next);
     void output(int level);
 };
 
