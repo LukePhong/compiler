@@ -82,6 +82,8 @@ public:
         Type(Type::FUNC), returnType(returnType), paramsType(paramsType){};
     std::string toStr();
     void setParamsType(std::vector<Type*> params) {paramsType = params;};
+    std::vector<Type*> getParamsType() { return paramsType; };
+    Type *getReturnType() { return returnType; };
 };
 
 class TypeSystem

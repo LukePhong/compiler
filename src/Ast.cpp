@@ -134,10 +134,22 @@ void Id::output(int level)
     fprintf(yyout, "%*cId\tname: %s\tscope: %d\ttype: %s\n", level, ' ',
             name.c_str(), scope, type.c_str());
 }
+//q12函数调用
+void FuncCall::output(int level){
+    fprintf(yyout, "%*cFunctionCall function name: %s, type: %s\n", level, ' ', 
+            funcDef->toStr().c_str(), funcDef->getType()->toStr().c_str());
+    for (auto i:arg){
+        i->output(level + 4);
+    }
+}
 
 void EmptyStmt::output(int level)
 {
     fprintf(yyout, "%*cEmptyStmt\n", level, ' ');
+}
+void ExprStmt::output(int level)
+{
+    exp->output(level + 4);
 }
 
 void BreakStmt::output(int level)
@@ -149,6 +161,7 @@ void ContinueStmt::output(int level)
 {
     fprintf(yyout, "%*cContinueStmt\n", level, ' ');
 }
+
 
 
 // void CompoundStmt::output(int level)

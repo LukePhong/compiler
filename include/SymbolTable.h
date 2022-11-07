@@ -105,6 +105,7 @@ public:
     // You can add any function you need here.
     // void addDimension(int d);
     // void setDimension(std::vector<int> d){dimensions = d;};
+    bool paramListMarch(std::vector<Type*> typeList);
 };
 
 
@@ -142,14 +143,21 @@ class SymbolTable
 {
 private:
     std::map<std::string, SymbolEntry*> symbolTable;
+    //q12函数调用
+    std::multimap<std::string, SymbolEntry*> funcTable;
     SymbolTable *prev;
     int level;
     static int counter;
+
 public:
     SymbolTable();
     SymbolTable(SymbolTable *prev);
     void install(std::string name, SymbolEntry* entry);
     SymbolEntry* lookup(std::string name);
+    //q12函数调用
+    SymbolEntry* lookup(std::string name, std::vector<Type*> typeList);
+    void installFunc(std::string name, SymbolEntry* entry);
+
     SymbolTable* getPrev() {return prev;};
     int getLevel() {return level;};
     static int getLabel() {return counter++;};

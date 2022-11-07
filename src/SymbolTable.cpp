@@ -57,15 +57,26 @@ IdentifierSymbolEntry::IdentifierSymbolEntry(Type *type, std::string name, int s
     this->scope = scope;
 }
 
-// void IdentifierSymbolEntry::addDimension(int d){
-//     assert(d > 0);
-//     if(dimensions[0] == 0){
-//         std::vector<int>().swap(dimensions);
-//         dimensions = {d};
-//     }else{
-//         dimensions.push_back(d);
-//     }
-// }
+bool IdentifierSymbolEntry::paramListMarch(std::vector<Type*> typeList){
+    //TODO: 没有对返回类型匹配的判断（参考C/C++的判断方式）
+
+    std::vector<Type*> targetList = ((FunctionType*)type)->getParamsType();
+    if (typeList.size() != targetList.size()){
+        // std::cout<<"hello1"<<std::endl;
+        std::cout<<typeList.size()<<" "<<targetList.size()<<std::endl;
+        return false;
+    }
+    for (size_t i = 0; i < typeList.size(); i++)
+    {
+        if(typeList[i]->getKind() != targetList[i]->getKind()){
+        std::cout<<"hello2"<<std::endl;
+            return false;
+        }
+    }
+    
+    return true;
+    
+}
 
 std::string IdentifierSymbolEntry::toStr()
 {
@@ -124,6 +135,32 @@ SymbolEntry* SymbolTable::lookup(std::string name)
             return nullptr;
         }
     }
+}
+//q12函数调用
+SymbolEntry* SymbolTable::lookup(std::string name, std::vector<Type*> typeList){
+    std::cout<<"hello4"<<std::endl;
+    // 同时满足名字和参数列表相同才返回
+    if(funcTable.find(name)!=funcTable.end()){
+        std::cout<<"hello3"<<std::endl;
+        auto pr = funcTable.equal_range(name);
+        for (auto iter = pr.first ; iter != pr.second; ++iter){
+            if(((IdentifierSymbolEntry*)(iter->second))->paramListMarch(typeList))
+                return iter->second;
+        }
+        return nullptr;
+    }
+    else{
+        if(prev != nullptr){
+            return prev->lookup(name, typeList);
+        }
+        else{
+            return nullptr;
+        }
+    }
+}
+//q12函数调用
+void SymbolTable::installFunc(std::string name, SymbolEntry* entry){
+    funcTable.insert({name, entry});
 }
 
 // install the entry into current symbol table.

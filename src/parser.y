@@ -20,6 +20,8 @@
     };
     std::vector<tempDeclArray> tempDecl;
     std::vector<Type*> tempParaType;
+    std::vector<Type*> tempArgType;
+    std::vector<ExprNode*> tempArgList;
 }
 
 %code requires {
@@ -58,7 +60,7 @@
 
 %nterm <stmttype> Stmts Stmt AssignStmt BlockStmt IfStmt ReturnStmt DeclStmt FuncDef BreakStmt ContinueStmt 
                     WhileStmt DimArray ArrayDefBlock ArrayDef FuncParam //ArrayParam//FuncParamList DefStmt
-%nterm <exprtype> Exp AddExp Cond LOrExp PrimaryExp LVal RelExp LAndExp UnaryExp MulExp
+%nterm <exprtype> Exp AddExp Cond LOrExp PrimaryExp LVal RelExp LAndExp UnaryExp MulExp FuncCall
 %nterm <type> Type
 
 %precedence THEN
@@ -101,6 +103,7 @@ Stmt
     /* | DefStmt {$$=$1;} */
     // 单分号（空语句）
     | SEMICOLON {$$ = new EmptyStmt();}
+    | Exp SEMICOLON { $$; }
     | BreakStmt {$$ = $1;}
     | ContinueStmt {$$ = $1;}
     | WhileStmt {$$ = $1;}
@@ -445,6 +448,9 @@ PrimaryExp
     | LPAREN Exp RPAREN {
         $$ = $2;
     }
+    | FuncCall {
+        $$ = $1;
+    }
     ;
 
 Type
@@ -659,32 +665,67 @@ FuncDef
     :
     Type ID {
         Type *funcType;
+        //设定返回类型
         funcType = new FunctionType($1,{});
         SymbolEntry *se = new IdentifierSymbolEntry(funcType, $2, identifiers->getLevel());
-        identifiers->install($2, se);
+        identifiers->installFunc($2, se);
         //新建一层符号表
         identifiers = new SymbolTable(identifiers);
     }
     //q10添加参数列表
     LPAREN FuncParam {
         SymbolEntry *se;
-        se = identifiers->lookup($2);
+        se = identifiers->lookup($2, {});
         assert(se != nullptr);
         ((FunctionType*)(se->getType()))->setParamsType(tempParaType);
-        std::vector<Type*>().swap(tempParaType); 
     } RPAREN
     BlockStmt
     {
         SymbolEntry *se;
-        se = identifiers->lookup($2);
+        se = identifiers->lookup($2, tempParaType);
         assert(se != nullptr);
         $$ = new FunctionDef(se, $5, $8);
         SymbolTable *top = identifiers;
         identifiers = identifiers->getPrev();
+        std::vector<Type*>().swap(tempParaType); 
         delete top;
         delete []$2;
     }
     ;
+
+//q12函数调用
+FuncCall
+    :
+    ID LPAREN FuncArg RPAREN {
+        //查看符号表中是否存在
+        SymbolEntry *se;
+        se = identifiers->lookup($1, tempArgType);
+        assert(se != nullptr);
+        // 新建一个temp符号表项
+        auto tempSe = new TemporarySymbolEntry(((FunctionType*)(se->getType()))->getReturnType(), SymbolTable::getLabel());
+        // 新建语法树节点，符号表项、expr的向量、临时符号表项
+        auto n = new FuncCall(tempSe, (IdentifierSymbolEntry *)se, tempArgList);
+        $$ = (ExprNode*)n;
+        // 清空tempArgList和tempParaType
+        std::vector<Type*>().swap(tempArgType);
+        std::vector<ExprNode*>().swap(tempArgList);
+    }
+    ;
+
+FuncArg
+    : FuncArg COMMA Exp {
+        //向节点中加入新的参数
+        tempArgList.push_back($3);
+        tempArgType.push_back($3->getSymbolEntry()->getType());
+    }
+    | Exp {
+        //新建语法树节点
+        tempArgList.push_back($1);
+        tempArgType.push_back($1->getSymbolEntry()->getType());
+    }
+    | %empty {}
+    ;
+
 //q10添加参数列表
 FuncParam
     :FuncParam COMMA Type ID{

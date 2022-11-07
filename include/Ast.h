@@ -4,7 +4,8 @@
 #include <fstream>
 #include <vector>
 
-class SymbolEntry;
+// class SymbolEntry;
+#include <SymbolTable.h>
 
 class Node
 {
@@ -26,16 +27,16 @@ public:
     //获得符号表项
     SymbolEntry *getSymbolEntry(){return symbolEntry;}
 };
-// class BinaryExpr : public ExprNode
-// {
-// private:
-//     int op;
-//     ExprNode *expr1, *expr2;
-// public:
-//     enum {ADD, SUB, AND, OR, LESS};
-//     BinaryExpr(SymbolEntry *se, int op, ExprNode*expr1, ExprNode*expr2) : ExprNode(se), op(op), expr1(expr1), expr2(expr2){};
-//     void output(int level);
-// };
+//q12函数调用
+class FuncCall : public ExprNode{
+private:
+    IdentifierSymbolEntry *funcDef;
+    std::vector<ExprNode*> arg;
+public:
+    FuncCall(SymbolEntry *symbolEntry, IdentifierSymbolEntry *def, std::vector<ExprNode*> arg) : ExprNode(symbolEntry), funcDef(def), arg(arg) {};
+    void output(int level);
+};
+
 class BinaryExpr : public ExprNode
 {
 private:
@@ -118,6 +119,14 @@ class EmptyStmt : public StmtNode
 {
 public:
     EmptyStmt(){};
+    void output(int level);
+};
+class ExprStmt : public StmtNode
+{
+private:
+    ExprNode* exp;
+public:
+    ExprStmt(ExprNode* exp) : exp(exp){};
     void output(int level);
 };
 
