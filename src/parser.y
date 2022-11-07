@@ -836,7 +836,9 @@ FuncParam
         $$ = (StmtNode*)p;
         delete []$4;
     }
-    |%empty {}
+    |%empty {
+        $$ = (StmtNode*)nullptr;
+    }
     ;
 
 %%

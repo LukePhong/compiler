@@ -63,13 +63,13 @@ bool IdentifierSymbolEntry::paramListMarch(std::vector<Type*> typeList){
     std::vector<Type*> targetList = ((FunctionType*)type)->getParamsType();
     if (typeList.size() != targetList.size()){
         // std::cout<<"hello1"<<std::endl;
-        std::cout<<typeList.size()<<" "<<targetList.size()<<std::endl;
+        // std::cout<<typeList.size()<<" "<<targetList.size()<<std::endl;
         return false;
     }
     for (size_t i = 0; i < typeList.size(); i++)
     {
         if(typeList[i]->getKind() != targetList[i]->getKind()){
-        std::cout<<"hello2"<<std::endl;
+        // std::cout<<"hello2"<<std::endl;
             return false;
         }
     }
@@ -138,10 +138,10 @@ SymbolEntry* SymbolTable::lookup(std::string name)
 }
 //q12函数调用
 SymbolEntry* SymbolTable::lookup(std::string name, std::vector<Type*> typeList){
-    std::cout<<"hello4"<<std::endl;
+    // std::cout<<"hello4"<<std::endl;
     // 同时满足名字和参数列表相同才返回
     if(funcTable.find(name)!=funcTable.end()){
-        std::cout<<"hello3"<<std::endl;
+        // std::cout<<"hello3"<<std::endl;
         auto pr = funcTable.equal_range(name);
         for (auto iter = pr.first ; iter != pr.second; ++iter){
             if(((IdentifierSymbolEntry*)(iter->second))->paramListMarch(typeList))
