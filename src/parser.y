@@ -1,7 +1,6 @@
 %code top{
     #include <iostream>
     #include <assert.h>
-    // #include <vector>
     #include <string>
     using namespace std;
     #include "parser.h"
@@ -22,6 +21,10 @@
     std::vector<Type*> tempParaType;
     std::vector<Type*> tempArgType;
     std::vector<ExprNode*> tempArgList;
+
+    //q15嵌套函数调用
+    std::vector<std::vector<Type*>> vecArgType;
+    std::vector<std::vector<ExprNode*>> vecArgList;
 }
 
 %code requires {
@@ -60,7 +63,7 @@
 
 %nterm <stmttype> Stmts Stmt AssignStmt BlockStmt IfStmt ReturnStmt DeclStmt FuncDef BreakStmt ContinueStmt 
                     WhileStmt DimArray ArrayDefBlock ArrayDef FuncParam //ArrayParam//FuncParamList DefStmt
-%nterm <exprtype> Exp AddExp Cond LOrExp PrimaryExp LVal RelExp LAndExp UnaryExp MulExp FuncCall
+%nterm <exprtype> Exp AddExp Cond LOrExp PrimaryExp LVal RelExp LAndExp UnaryExp MulExp FuncCall ArrayIndex
 %nterm <type> Type
 
 %precedence THEN
@@ -120,6 +123,9 @@ LVal
         }
         $$ = new Id(se);
         delete []$1;
+    }
+    |ArrayIndex {
+        $$ = $1;
     }
     ;
 AssignStmt
@@ -499,14 +505,28 @@ DeclStmt
         SymbolEntry *se;
         auto n = new DeclStmt();
         for(auto i:tempDecl){
-            se = new IdentifierSymbolEntry($1, i.name, i.level);
+            if (i.dim){
+                if($1->isInt()){
+                    // std::cout<<"hello1"<<std::endl;
+                    auto t = new ArrayIntType(*(((DimArray*)i.dim)->getDimList()), $1);
+                    se = new IdentifierSymbolEntry(t, i.name, i.level);
+                }
+                else{
+                    // std::cout<<"hello2"<<std::endl;
+                    auto t = new ArrayFloatType(*(((DimArray*)i.dim)->getDimList()), $1);
+                    se = new IdentifierSymbolEntry(t, i.name, i.level);
+                }
+            }
+            else{
+                // std::cout<<"hello3"<<std::endl;
+                se = new IdentifierSymbolEntry($1, i.name, i.level);
+            }
             identifiers->install(i.name, se);            
             //q3添加DefStmt变量常量定义语句
             if(i.isDef)
                 //q8数组支持
                 if(i.dim)
                     if(i.defArr){
-                        // printf("hello\n");
                         n->addDecl(new Id(se), (ExprNode*)i.exp, (DimArray*)i.dim, (ArrayDef*)i.defArr);
                     }
                     else
@@ -527,7 +547,18 @@ DeclStmt
         SymbolEntry *se;
         auto n = new DeclStmt();
         for(auto i:tempDecl){
-            se = new IdentifierSymbolEntry($2, i.name, i.level, SymbolEntry::CONSTANT);
+            if (i.dim){
+                if($2->isInt()){
+                    auto t = new ArrayIntType(*(((DimArray*)i.dim)->getDimList()), $2);
+                    se = new IdentifierSymbolEntry(t, i.name, i.level);
+                }
+                else{
+                    auto t = new ArrayFloatType(*(((DimArray*)i.dim)->getDimList()), $2);
+                    se = new IdentifierSymbolEntry(t, i.name, i.level);
+                }
+            }
+            else
+                se = new IdentifierSymbolEntry($2, i.name, i.level);
             identifiers->install(i.name, se);
             //q3添加DefStmt变量常量定义语句
             if(i.isDef)
@@ -633,6 +664,30 @@ ArrayDefBlock
     }
     ;
 
+
+//q14数组取值
+ArrayIndex
+    : ID DimArray {
+        SymbolEntry *se;
+        se = identifiers->lookup($1);
+        if(se == nullptr)
+        {
+            fprintf(stderr, "identifier \"%s\" is undefined\n", (char*)$1);
+            delete [](char*)$1;
+            assert(se != nullptr);
+        }
+        // 小于则为数组，大于等于则为单个变量（i[]会导致<右边为0）
+        auto n = new TemporarySymbolEntry( ((DimArray*)$2)->getDimList()->size() < ((ArrayType*)(se->getType()))->getDim() ? se->getType() : ((ArrayType*)(se->getType()))->getElementType() , SymbolTable::getLabel());
+        // int temp = ((DimArray*)$2)->getDimList()->size() < ((ArrayType*)se)->getDim() ? se->getType() : ((ArrayType*)se)->getElementType();
+        // std::cout<<n->getType()->isInt()<<std::endl;
+        // std::cout<<((DimArray*)$2)->getDimList()->size()<<" "<<((ArrayType*)(se->getType()))->getDim()<<std::endl;
+        // if(!se->getType())
+        //     std::cout<<"null!"<<std::endl;
+        $$ = new ArrayIndex(n, se, (DimArray*)$2);
+        delete []$1;
+    }
+    ;
+
 /* DeclArray
     : ID LSQUARE Exp RBRACE{
         tempDecl.emplace_back(tempDeclArray{identifiers->getLevel(), $1, true, $3, {$3->}});
@@ -699,31 +754,45 @@ FuncCall
     ID LPAREN FuncArg RPAREN {
         //查看符号表中是否存在
         SymbolEntry *se;
-        se = identifiers->lookup($1, tempArgType);
+        se = identifiers->lookup($1, vecArgType.back());
         assert(se != nullptr);
         // 新建一个temp符号表项
         auto tempSe = new TemporarySymbolEntry(((FunctionType*)(se->getType()))->getReturnType(), SymbolTable::getLabel());
         // 新建语法树节点，符号表项、expr的向量、临时符号表项
-        auto n = new FuncCall(tempSe, (IdentifierSymbolEntry *)se, tempArgList);
+        auto n = new FuncCall(tempSe, (IdentifierSymbolEntry *)se, vecArgList.back());
         $$ = (ExprNode*)n;
         // 清空tempArgList和tempParaType
-        std::vector<Type*>().swap(tempArgType);
-        std::vector<ExprNode*>().swap(tempArgList);
+        // std::vector<Type*>().swap(tempArgType);
+        // std::vector<ExprNode*>().swap(tempArgList);
+        vecArgList.pop_back();
+        vecArgType.pop_back();
     }
     ;
 
 FuncArg
     : FuncArg COMMA Exp {
+        // std::cout<<"hello5"<<std::endl;
         //向节点中加入新的参数
-        tempArgList.push_back($3);
-        tempArgType.push_back($3->getSymbolEntry()->getType());
+        // tempArgList.push_back($3);
+        // tempArgType.push_back($3->getSymbolEntry()->getType());
+        //q15嵌套函数调用
+        vecArgList.back().push_back($3);
+        vecArgType.back().push_back($3->getSymbolEntry()->getType());
     }
     | Exp {
+        // std::cout<<"hello4"<<std::endl;
         //新建语法树节点
-        tempArgList.push_back($1);
-        tempArgType.push_back($1->getSymbolEntry()->getType());
+        // tempArgList.push_back($1);
+        // tempArgType.push_back($1->getSymbolEntry()->getType());
+        //q15嵌套函数调用
+        vecArgList.emplace_back(1, $1);
+        vecArgType.emplace_back(1, $1->getSymbolEntry()->getType());
     }
-    | %empty {}
+    | %empty {
+        //q15嵌套函数调用
+        vecArgList.emplace_back();
+        vecArgType.emplace_back();
+    }
     ;
 
 //q10添加参数列表
@@ -804,6 +873,8 @@ FuncParam
         auto p = (FuncParam*)$1;
         if ($3->isInt()){
             tempParaType.push_back(TypeSystem::arrayIntType);
+            // if(TypeSystem::arrayIntType != nullptr)
+            //     std::cout<<"array param!"<<std::endl;
             se = new IdentifierSymbolEntry(TypeSystem::arrayIntType, $4, identifiers->getLevel());
         }
         else{

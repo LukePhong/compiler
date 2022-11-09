@@ -62,14 +62,13 @@ bool IdentifierSymbolEntry::paramListMarch(std::vector<Type*> typeList){
 
     std::vector<Type*> targetList = ((FunctionType*)type)->getParamsType();
     if (typeList.size() != targetList.size()){
-        // std::cout<<"hello1"<<std::endl;
-        // std::cout<<typeList.size()<<" "<<targetList.size()<<std::endl;
+        std::cout<<typeList.size()<<" "<<targetList.size()<<std::endl;
         return false;
     }
     for (size_t i = 0; i < typeList.size(); i++)
     {
         if(typeList[i]->getKind() != targetList[i]->getKind()){
-        // std::cout<<"hello2"<<std::endl;
+            std::cout<<typeList[i]->getKind()<<" "<<targetList[i]->getKind()<<std::endl;
             return false;
         }
     }

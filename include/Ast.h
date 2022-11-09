@@ -75,6 +75,7 @@ public:
     void output(int level);
 };
 
+
 class StmtNode : public Node
 {};
 
@@ -87,6 +88,7 @@ public:
     DimArray(){};
     void addDim(ExprNode* next);
     void output(int level);
+    std::vector<ExprNode*>* getDimList() { return &dimList; };
 };
 
 //q9数组定义
@@ -103,17 +105,18 @@ public:
     ExprNode* getLeaf() { return expr; };
     void output(int level);
 };
-//q9数组定义
-// class ArrayItem : public StmtNode
-// {
-// private:
-//     std::vector<ExprNode*> exprList;
-    
-// public:
-//     ArrayItem(){};
-//     void addExpr(ExprNode* exp);
-//     void output(int level);
-// };
+//q14数组取值
+class ArrayIndex : public ExprNode
+{
+private:
+    SymbolEntry* arrDef;
+    DimArray* dim;
+public:
+    //临时项、原始定义、维度
+    ArrayIndex(SymbolEntry *se, SymbolEntry *arr, DimArray* dim) : ExprNode(se) , arrDef(arr), dim(dim){};
+    void output(int level);
+};
+
 
 class EmptyStmt : public StmtNode
 {

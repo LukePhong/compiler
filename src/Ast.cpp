@@ -134,6 +134,20 @@ void Id::output(int level)
     fprintf(yyout, "%*cId\tname: %s\tscope: %d\ttype: %s\n", level, ' ',
             name.c_str(), scope, type.c_str());
 }
+//q14数组取值
+void ArrayIndex::output(int level)
+{
+    std::string name, type;
+    int scope;
+    name = arrDef->toStr();
+    type = symbolEntry->getType()->toStr();
+    // scope = dynamic_cast<IdentifierSymbolEntry*>(symbolEntry)->getScope();
+    scope = dynamic_cast<IdentifierSymbolEntry*>(arrDef)->getScope();
+    fprintf(yyout, "%*cArrayValue\tname: %s\tscope: %d\ttype: %s\n", level, ' ',
+            name.c_str(), scope, type.c_str());
+    dim->output(level + 4);
+}
+
 //q12函数调用
 void FuncCall::output(int level){
     fprintf(yyout, "%*cFunctionCall function name: %s, type: %s\n", level, ' ', 

@@ -41,7 +41,7 @@
 %}
 
 
-FLOAT ({DECIMIAL}\.[0-9]+|{DECIMIAL}\.[0-9]+[Ee](\+|-)?[0-9]+)
+FLOAT ({DECIMIAL}\.[0-9]*|{DECIMIAL}\.[0-9]*[Ee](\+|-)?[0-9]+|{DECIMIAL}[Ee](\+|-)?[0-9]+)
 HEXADECIMAL (0[xX][0-9a-fA-F]+)
 OCTAL (0[0-7]+)
 DECIMIAL ([1-9][0-9]*|0)
@@ -310,7 +310,7 @@ BLOCKCOMMENTEND "*/"
 }
 "-" {
     #ifdef ONLY_FOR_LEX
-        DEBUG_FOR_LAB4("SUB\t+", yylineno, offset - yyleng);
+        DEBUG_FOR_LAB4("SUB\t-", yylineno, offset - yyleng);
      #else
         return SUB;
     #endif
@@ -377,7 +377,7 @@ BLOCKCOMMENTEND "*/"
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("ID\t"+std::string(yytext), yylineno, offset - yyleng);
      #else
-        yylval.strtype = new char[100];
+        yylval.strtype = new char[2501];
         strcpy(yylval.strtype, yytext);
         return ID;
     #endif
@@ -387,7 +387,7 @@ BLOCKCOMMENTEND "*/"
             DEBUG_FOR_LAB4("FLOAT\t"+std::string(yytext), yylineno, offset - yyleng);
          #else
             sscanf(yytext, "%f", &yylval.ftype);
-            // printf("%f\n", yylval.ftype);
+            //printf("%f\n", yylval.ftype);
             return FLOAT;
         #endif
     }

@@ -5,8 +5,8 @@ IntType TypeSystem::commonInt = IntType(4);
 FloatType TypeSystem::commonFloat = FloatType(4);
 VoidType TypeSystem::commonVoid = VoidType();
 BoolType TypeSystem::commonBool = BoolType(1);
-ArrayIntType TypeSystem::commonArrayInt = ArrayIntType();
-ArrayFloatType TypeSystem::commonArrayFloat = ArrayFloatType();
+ArrayIntType TypeSystem::commonArrayInt = ArrayIntType(&commonInt);
+ArrayFloatType TypeSystem::commonArrayFloat = ArrayFloatType(&commonFloat);
 
 Type* TypeSystem::intType = &commonInt;
 Type* TypeSystem::floatType = &commonFloat;
