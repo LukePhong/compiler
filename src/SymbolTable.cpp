@@ -67,7 +67,8 @@ bool IdentifierSymbolEntry::paramListMarch(std::vector<Type*> typeList){
     }
     for (size_t i = 0; i < typeList.size(); i++)
     {
-        if(typeList[i]->getKind() != targetList[i]->getKind()){
+        //q17参数列表模糊匹配
+        if(typeList[i]->getKind() != targetList[i]->getKind() && !(typeList[i]->isNumber() && targetList[i]->isNumber()) ){
             std::cout<<typeList[i]->getKind()<<" "<<targetList[i]->getKind()<<std::endl;
             return false;
         }

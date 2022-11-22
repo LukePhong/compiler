@@ -27,6 +27,9 @@ public:
     int getKind() { return (int)kind; };
     //q11参数列表数组支持
     // bool isFloat() const {return kind == FLOAT;};
+    //q17参数列表模糊匹配
+    //判断是否是数字类型
+    bool isNumber() { return kind < 3; };
 };
 
 class IntType : public Type
@@ -103,7 +106,7 @@ public:
     FunctionType(Type* returnType, std::vector<Type*> paramsType) : 
         Type(Type::FUNC), returnType(returnType), paramsType(paramsType){};
     std::string toStr();
-    void setParamsType(std::vector<Type*> params) {paramsType = params;};
+    void setParamsType(std::vector<Type*> params) { paramsType = params;};
     std::vector<Type*> getParamsType() { return paramsType; };
     Type *getReturnType() { return returnType; };
 };

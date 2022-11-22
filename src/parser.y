@@ -25,6 +25,9 @@
     //q15嵌套函数调用
     std::vector<std::vector<Type*>> vecArgType;
     std::vector<std::vector<ExprNode*>> vecArgList;
+    //q18避免定义时出现未声明变量报错
+    //上层type保留栈，只有一个元素
+    Type* upperType = nullptr;
 }
 
 %code requires {
@@ -463,6 +466,7 @@ Type
     //这里使得符号表项中的的Type指针能指Type类型的值
     : INT {
         $$ = TypeSystem::intType;
+        upperType = TypeSystem::intType;
     }
     | VOID {
         $$ = TypeSystem::voidType;
@@ -470,6 +474,7 @@ Type
     | FLT {
         //q6浮点数支持
         $$ = TypeSystem::floatType;
+        upperType = TypeSystem::floatType;
     }
     ;
 
@@ -501,7 +506,11 @@ Type
 //q7支持连续定义/声明
 DeclStmt
     :
-    Type DeclBody SEMICOLON{
+    Type 
+    /* {
+        upperType = $1;
+    }  */
+    DeclBody SEMICOLON{
         SymbolEntry *se;
         auto n = new DeclStmt();
         for(auto i:tempDecl){
@@ -543,7 +552,11 @@ DeclStmt
         std::vector<tempDeclArray>().swap(tempDecl);
     }
     //q2const常量支持
-    |CONST Type DeclBody SEMICOLON{
+    |CONST Type 
+    /* {
+        upperType = $2;
+    }  */
+    DeclBody SEMICOLON{
         SymbolEntry *se;
         auto n = new DeclStmt();
         for(auto i:tempDecl){
@@ -584,6 +597,10 @@ DeclBody
     :
     //没有赋值语句
     DeclBody COMMA ID{
+        //q18避免定义时出现未声明变量报错
+        auto tempEntry = new IdentifierSymbolEntry(upperType, $3, identifiers->getLevel());
+        identifiers->install($3, tempEntry); 
+
         tempDecl.emplace_back(tempDeclArray{identifiers->getLevel(), $3});
         delete []$3;
     }
@@ -603,6 +620,10 @@ DeclBody
     }
     //有赋值语句
     |DeclBody COMMA ID ASSIGN Exp{
+        //q18避免定义时出现未声明变量报错
+        auto tempEntry = new IdentifierSymbolEntry(upperType, $3, identifiers->getLevel());
+        identifiers->install($3, tempEntry); 
+
         tempDecl.emplace_back(tempDeclArray{identifiers->getLevel(), $3, true, $5});
         delete []$3;
     }
@@ -732,6 +753,7 @@ FuncDef
         SymbolEntry *se;
         se = identifiers->lookup($2, {});
         assert(se != nullptr);
+        // cout<<tempParaType.size()<<endl;
         ((FunctionType*)(se->getType()))->setParamsType(tempParaType);
     } RPAREN
     BlockStmt
