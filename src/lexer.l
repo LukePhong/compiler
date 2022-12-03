@@ -61,39 +61,39 @@ BLOCKCOMMENTEND "*/"
 
     //more terminal words
 "break" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("BREAK\tbreak", yylineno, offset - yyleng);
-     #else
+     //#else
         return BREAK;
-    #endif 
+    //#endif 
 }
 "const" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("CONST\tconst", yylineno, offset - yyleng);
-     #else
+     //#else
         return CONST;
-    #endif 
+    //#endif 
 }
 "continue" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("CONTINUE\tcontinue", yylineno, offset - yyleng);
-     #else
+     //#else
         return CONTINUE;
-    #endif 
+    //#endif 
 }
 "for" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("FOR\tfor", yylineno, offset - yyleng);
-     #else
+     //#else
         return FOR;
-    #endif 
+    //#endif 
 }
 "while" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("WHILE\twhile", yylineno, offset - yyleng);
-     #else
+     //#else
         return WHILE;
-    #endif 
+    //#endif 
 }
 
 "int" {
@@ -102,322 +102,322 @@ BLOCKCOMMENTEND "*/"
     *   Q1: Why we need to return INT in further labs?
     *   Q2: What is "INT" actually?
     */
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("INT\tint", yylineno, offset - yyleng);
-     #else
+     //#else
         return INT;
-    #endif
+    //#endif
 }
 "float" {
     //q6浮点数支持
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("FLOAT\tfloat", yylineno, offset - yyleng);
-     #else
+     //#else
         return FLT;
-    #endif
+    //#endif
 }
 "void" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("VOID\tvoid", yylineno, offset - yyleng);
-     #else
+     //#else
         return VOID;
-    #endif 
+    //#endif 
 }
 "if" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("IF\tif", yylineno, offset - yyleng);
-     #else
+     //#else
         return IF;
-    #endif
+    //#endif
 };
 "else" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("ELSE\telse", yylineno, offset - yyleng);
-     #else
+     //#else
         return ELSE;
-    #endif
+    //#endif
 };
 "return" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("RETURN\treturn", yylineno, offset - yyleng);
-     #else
+     //#else
         return RETURN;
-    #endif
+    //#endif
 }
 
 "!" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("LOGIC_NOT\t!", yylineno, offset - yyleng);
-     #else
+     //#else
         return LOGIC_NOT;
-    #endif
+    //#endif
 }
 "&&" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("LOGIC_AND\t!", yylineno, offset - yyleng);
-     #else
+     //#else
         return LOGIC_AND;
-    #endif
+    //#endif
 }
 "||" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("LOGIC_OR\t!", yylineno, offset - yyleng);
-     #else
+     //#else
         return LOGIC_OR;
-    #endif
+    //#endif
 }
 
 "*" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("PRODUCT\t*", yylineno, offset - yyleng);
-     #else
+     //#else
         return PRODUCT;
-    #endif
+    //#endif
 }
 "/" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("DIVISION\t/", yylineno, offset - yyleng);
-     #else
+     //#else
         return DIVISION;
-    #endif
+    //#endif
 }
 "%" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("REMAINDER\t%", yylineno, offset - yyleng);
-     #else
+     //#else
         return REMAINDER;
-    #endif
+    //#endif
 }
 "~" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("NOT\t~", yylineno, offset - yyleng);
-     #else
+     //#else
         return NOT;
-    #endif
+    //#endif
 }
 "&" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("AND\t&", yylineno, offset - yyleng);
-     #else
+     //#else
         return AND;
-    #endif
+    //#endif
 }
 "|" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("OR\t|", yylineno, offset - yyleng);
-     #else
+     //#else
         return OR;
-    #endif
+    //#endif
 }
 "^" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("XOR\t^", yylineno, offset - yyleng);
-     #else
+     //#else
         return XOR;
-    #endif
+    //#endif
 }
 
 "+=" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("ADDITION ASSIGNMENT\t+=", yylineno, offset - yyleng);
-     #else
+     //#else
         return ADDITION_ASSIGNMENT;
-    #endif
+    //#endif
 }
 "-=" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("SUBTRACTION ASSIGNMENT\t-=", yylineno, offset - yyleng);
-     #else
+     //#else
         return SUBTRACTION_ASSIGNMENT;
-    #endif
+    //#endif
 }
 "*=" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("MULTIPLICATION ASSIGNMENT\t*=", yylineno, offset - yyleng);
-     #else
+     //#else
         return MULTIPLICATION_ASSIGNMENT;
-    #endif
+    //#endif
 }
 "/=" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("DIVISION ASSIGNMENT\t/=", yylineno, offset - yyleng);
-     #else
+     //#else
         return DIVISION_ASSIGNMENT;
-    #endif
+    //#endif
 }
 "%=" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("MODULO ASSIGNMENT\t%=", yylineno, offset - yyleng);
-     #else
+     //#else
         return MODULO_ASSIGNMENT;
-    #endif
+    //#endif
 }
 
 "==" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("EQUAL TO\t==", yylineno, offset - yyleng);
-     #else
+     //#else
         return EQUAL_TO;
-    #endif
+    //#endif
 }
 "!=" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("NOT EQUAL TO\t!=", yylineno, offset - yyleng);
-     #else
+     //#else
         return NOT_EQUAL_TO;
-    #endif
+    //#endif
 }
 "<=" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("LESS EQUAL\t<=", yylineno, offset - yyleng);
-     #else
+     //#else
         return LESS_EQUAL;
-    #endif
+    //#endif
 }
 ">=" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("GREATER EQUAL\t>=", yylineno, offset - yyleng);
-     #else
+     //#else
         return GREATER_EQUAL;
-    #endif
+    //#endif
 }
 
 "=" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("ASSIGN\t=", yylineno, offset - yyleng);
-     #else
+     //#else
         return ASSIGN;
-    #endif
+    //#endif
 }
 "<" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("LESS\t<", yylineno, offset - yyleng);
-     #else
+     //#else
         return LESS;
-    #endif
+    //#endif
 }
 ">" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("GREATER\t>", yylineno, offset - yyleng);
-     #else
+     //#else
         return GREATER;
-    #endif
+    //#endif
 }
 "+" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("ADD\t+", yylineno, offset - yyleng);
-     #else
+     //#else
         return ADD;
-    #endif
+    //#endif
 }
 "-" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("SUB\t-", yylineno, offset - yyleng);
-     #else
+     //#else
         return SUB;
-    #endif
+    //#endif
 }
 ";" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("SEMICOLON\t;", yylineno, offset - yyleng);
-     #else
+     //#else
         return SEMICOLON;
-    #endif
+    //#endif
 }
 "(" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("LPAREN\t(", yylineno, offset - yyleng);
-     #else
+     //#else
         return LPAREN;
-    #endif
+    //#endif
 }
 ")" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("RPAREN\t)", yylineno, offset - yyleng);
-     #else
+     //#else
     return RPAREN;
-    #endif
+    //#endif
 }
 "[" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("LSQUARE\t[", yylineno, offset - yyleng);
-     #else
+     //#else
     return LSQUARE;
-    #endif
+    //#endif
 }
 "]" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("RSQUARE\t]", yylineno, offset - yyleng);
-     #else
+     //#else
     return RSQUARE;
-    #endif
+    //#endif
 }
 "{" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("LBRACE\t{", yylineno, offset - yyleng);
-     #else
+     //#else
         return LBRACE;
-    #endif
+    //#endif
 }
 "}" {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("RBRACE\t}", yylineno, offset - yyleng);
-     #else
+     //#else
         return RBRACE;
-    #endif
+    //#endif
 }
 
 "," {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("COMMA\t,", yylineno, offset - yyleng);
-     #else
+     //#else
         return COMMA;
-    #endif
+    //#endif
 }
 
 {ID}    {
-    #ifdef ONLY_FOR_LEX
+    if(dump_tokens)
         DEBUG_FOR_LAB4("ID\t"+std::string(yytext), yylineno, offset - yyleng);
-     #else
+     //#else
         char *lexeme;
         lexeme = new char[strlen(yytext) + 1];
         strcpy(lexeme, yytext);
         yylval.strtype = lexeme;
         return ID;
-    #endif
+    //#endif
 }
 {FLOAT} {
-        #ifdef ONLY_FOR_LEX
+        if(dump_tokens)
             DEBUG_FOR_LAB4("FLOAT\t"+std::string(yytext), yylineno, offset - yyleng);
-         #else
+         //#else
             sscanf(yytext, "%f", &yylval.ftype);
             //printf("%f\n", yylval.ftype);
             return FLOAT;
-        #endif
+        //#endif
     }
 {DECIMIAL} {
-        #ifdef ONLY_FOR_LEX
+        if(dump_tokens)
             DEBUG_FOR_LAB4("INTEGER\t"+std::string(yytext), yylineno, offset - yyleng);
-         #else
+         //#else
             sscanf(yytext, "%d", &yylval.itype);
             return INTEGER;
-        #endif
+        //#endif
     }
 {HEXADECIMAL} {
-        #ifdef ONLY_FOR_LEX
+        if(dump_tokens)
             DEBUG_FOR_LAB4("INTEGER\t"+std::to_string(strtol(yytext,NULL,16)), yylineno, offset - yyleng);
-         #else
+         //#else
             sscanf(std::to_string(strtol(yytext,NULL,16)).c_str(), "%d", &yylval.itype);
             return INTEGER;
-        #endif
+        //#endif
     }
 {OCTAL} {
-        #ifdef ONLY_FOR_LEX
+        if(dump_tokens)
             DEBUG_FOR_LAB4("INTEGER\t"+std::to_string(strtol(yytext,NULL,8)), yylineno, offset - yyleng);
-         #else
+         //#else
             sscanf(std::to_string(strtol(yytext,NULL,8)).c_str(), "%d", &yylval.itype);
             return INTEGER;
-        #endif
+        //#endif
     }
 
 {COMMENT} {yylineno++;}
