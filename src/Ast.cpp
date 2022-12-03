@@ -255,6 +255,14 @@ void AssignStmt::typeCheck()
     // Todo
 }
 
+
+void Ast::output()
+{
+    fprintf(yyout, "program\n");
+    if(root != nullptr)
+        root->output(4);
+}
+
 void BinaryExpr::output(int level)
 {
     std::string op_str;
@@ -266,14 +274,38 @@ void BinaryExpr::output(int level)
         case SUB:
             op_str = "sub";
             break;
-        case AND:
-            op_str = "and";
+        case LOGIC_AND:
+            op_str = "logic_and";
             break;
-        case OR:
-            op_str = "or";
+        case LOGIC_OR:
+            op_str = "logic_or";
             break;
         case LESS:
             op_str = "less";
+            break;
+        case GREATER:
+            op_str = "greater";
+            break;
+        case LESS_EQUAL:
+            op_str = "less_equal";
+            break;
+        case GREATER_EQUAL:
+            op_str = "greater_equal";
+            break;
+        case EQUAL_TO:
+            op_str = "equal_to";
+            break;
+        case NOT_EQUAL_TO:
+            op_str = "not_equal_to";
+            break;
+        case PRODUCT:
+            op_str = "mul";
+            break;
+        case DIVISION:
+            op_str = "div";
+            break;
+        case REMAINDER:
+            op_str = "mod";
             break;
     }
     fprintf(yyout, "%*cBinaryExpr\top: %s\n", level, ' ', op_str.c_str());
@@ -281,20 +313,35 @@ void BinaryExpr::output(int level)
     expr2->output(level + 4);
 }
 
-void Ast::output()
+void UnaryExpr::output(int level)
 {
-    fprintf(yyout, "program\n");
-    if(root != nullptr)
-        root->output(4);
+    std::string op_str;
+    switch (op)
+    {
+        case SUB:
+            op_str = "neg";
+            break;
+        case LOGIC_NOT:
+            op_str = "logic_not";
+            break;
+    }
+    fprintf(yyout,"%*cUnaryExpr\top: %s\n", level, ' ', op_str.c_str());
+    expr->output(level + 4);
 }
+
 
 void Constant::output(int level)
 {
     std::string type, value;
     type = symbolEntry->getType()->toStr();
     value = symbolEntry->toStr();
-    fprintf(yyout, "%*cIntegerLiteral\tvalue: %s\ttype: %s\n", level, ' ',
-            value.c_str(), type.c_str());
+    //q6浮点数支持
+    if(symbolEntry->getType()->isInt())
+        fprintf(yyout, "%*cIntegerLiteral\tvalue: %s\ttype: %s\n", level, ' ',
+                value.c_str(), type.c_str());
+    else
+        fprintf(yyout, "%*cFloatLiteral\tvalue: %s\ttype: %s\n", level, ' ',
+                value.c_str(), type.c_str());
 }
 
 void Id::output(int level)
@@ -307,24 +354,175 @@ void Id::output(int level)
     fprintf(yyout, "%*cId\tname: %s\tscope: %d\ttype: %s\n", level, ' ',
             name.c_str(), scope, type.c_str());
 }
+//q14数组取值
+void ArrayIndex::output(int level)
+{
+    std::string name, type;
+    int scope;
+    name = arrDef->toStr();
+    type = symbolEntry->getType()->toStr();
+    // scope = dynamic_cast<IdentifierSymbolEntry*>(symbolEntry)->getScope();
+    scope = dynamic_cast<IdentifierSymbolEntry*>(arrDef)->getScope();
+    fprintf(yyout, "%*cArrayValue\tname: %s\tscope: %d\ttype: %s\n", level, ' ',
+            name.c_str(), scope, type.c_str());
+    dim->output(level + 4);
+}
 
+//q12函数调用
+void FuncCall::output(int level){
+    fprintf(yyout, "%*cFunctionCall function name: %s, type: %s\n", level, ' ', 
+            funcDef->toStr().c_str(), funcDef->getType()->toStr().c_str());
+    for (auto i:arg){
+        i->output(level + 4);
+    }
+}
+
+void EmptyStmt::output(int level)
+{
+    fprintf(yyout, "%*cEmptyStmt\n", level, ' ');
+}
+void ExprStmt::output(int level)
+{
+    exp->output(level + 4);
+}
+
+void BreakStmt::output(int level)
+{
+    fprintf(yyout, "%*cBreakStmt\n", level, ' ');
+}
+
+void ContinueStmt::output(int level)
+{
+    fprintf(yyout, "%*cContinueStmt\n", level, ' ');
+}
+
+
+
+// void CompoundStmt::output(int level)
+// {
+//     fprintf(yyout, "%*cCompoundStmt\n", level, ' ');
+//     stmt->output(level + 4);
+// }
 void CompoundStmt::output(int level)
 {
     fprintf(yyout, "%*cCompoundStmt\n", level, ' ');
-    stmt->output(level + 4);
+    if(stmt != nullptr){
+        stmt->output(level + 4);
+    }
+    else{
+        fprintf(yyout, "%*cNULL Stmt\n", level + 4, ' ');
+    }
 }
 
+
+// void SeqNode::output(int level)
+// {
+//     fprintf(yyout, "%*cSequence\n", level, ' ');
+//     stmt1->output(level + 4);
+//     stmt2->output(level + 4);
+// }
+//q1解决seq支持数目过少的问题
+void SeqNode::addNext(StmtNode* next)
+{
+    stmtList.push_back(next);
+}
 void SeqNode::output(int level)
 {
-    stmt1->output(level);
-    stmt2->output(level);
+    fprintf(yyout, "%*cSequence\n", level, ' ');
+    for(auto stmt : stmtList){
+        stmt->output(level + 4);
+    }
 }
+//q8数组支持
+void DimArray::addDim(ExprNode* next)
+{
+    dimList.push_back(next);
+}
+void DimArray::output(int level)
+{
+    fprintf(yyout, "%*cArray Dimension List\n", level, ' ');
+    for(auto expr : dimList){
+        expr->output(level + 4);
+    }
+}
+//q9数组定义
+void ArrayDef::addDef(ArrayDef* def)
+{
+    arrDefList.push_back(def);
+}
+void ArrayDef::output(int level)
+{
+    fprintf(yyout, "%*cArray Definition List\n", level, ' ');
+    if(expr){
+        expr->output(level + 4);
+        return;
+    }
+    for(auto itm : arrDefList){
+        itm->output(level + 4);
+    }
+}
+//q9数组定义
+// void ArrayItem::addExpr(ExprNode* exp)
+// {
+//     exprList.push_back(exp);
+// }
+// void ArrayItem::output(int level)
+// {
+//     // fprintf(yyout, "%*cArray Dimension List\n", level, ' ');
+//     for(auto expr : exprList){
+//         expr->output(level + 4);
+//     }
+// }
 
+
+void DeclStmt::addDecl(Id* next, ExprNode *exp, DimArray *dim, ArrayDef *defList){
+    idList.push_back(next);
+    exprList.push_back(exp);
+    dimArrayList.push_back(dim);
+    defArrList.push_back(defList);
+}
 void DeclStmt::output(int level)
 {
-    fprintf(yyout, "%*cDeclStmt\n", level, ' ');
-    id->output(level + 4);
+    for (size_t i = 0; i < idList.size(); i++)
+    {
+        fprintf(yyout, "%*c", level, ' ');
+        // q2const常量支持
+        //不对const另立节点类型，而是直接输出
+        if(idList[i]->getSymbolEntry()->isConstant()){
+            fprintf(yyout, "Constant\t");
+        }
+        // expr存在
+        if(exprList[i]){
+            fprintf(yyout, "DefStmt\n");
+            idList[i]->output(level + 4);
+            exprList[i]->output(level + 4);
+        }else{
+            fprintf(yyout, "DeclStmt\n");
+            idList[i]->output(level + 4);
+        }
+        //q8数组支持
+        if(dimArrayList[i]){
+            dimArrayList[i]->output(level + 4);
+        }
+        //q9数组定义
+        if(defArrList[i]){
+            defArrList[i]->output(level + 4);
+        }
+    }
+    
 }
+// void DefStmt::output(int level)
+// {
+//     fprintf(yyout, "%*c", level, ' ');
+//     // q2const常量支持
+//     //不对const另立节点类型，而是直接输出
+//     if(id->getSymbolEntry()->isConstant()){
+//         fprintf(yyout, "Constant\t");
+//     }
+//     fprintf(yyout, "DefStmt\n");
+//     id->output(level + 4);
+//     expr->output(level + 4);
+// }
 
 void IfStmt::output(int level)
 {
@@ -341,10 +539,28 @@ void IfElseStmt::output(int level)
     elseStmt->output(level + 4);
 }
 
+//q5参照if语句实现while循环
+void WhileStmt::output(int level)
+{
+    fprintf(yyout, "%*cWhileStmt\n", level, ' ');
+    cond->output(level + 4);
+    whileBodyStmt->output(level + 4);
+}
+
+// void ReturnStmt::output(int level)
+// {
+//     fprintf(yyout, "%*cReturnStmt\n", level, ' ');
+//     retValue->output(level + 4);
+// }
 void ReturnStmt::output(int level)
 {
     fprintf(yyout, "%*cReturnStmt\n", level, ' ');
-    retValue->output(level + 4);
+    if(retValue != nullptr){
+        retValue->output(level + 4);
+    }
+    else{
+        fprintf(yyout, "%*cVOID\n", level + 4, ' ');
+    }
 }
 
 void AssignStmt::output(int level)
@@ -361,5 +577,20 @@ void FunctionDef::output(int level)
     type = se->getType()->toStr();
     fprintf(yyout, "%*cFunctionDefine function name: %s, type: %s\n", level, ' ', 
             name.c_str(), type.c_str());
+    if(params){
+        params->output(level + 4);
+    }
     stmt->output(level + 4);
+}
+//q10添加参数列表
+void FuncParam::addNext(StmtNode* next)
+{
+    paramList.push_back(next);
+}
+void FuncParam::output(int level)
+{
+    fprintf(yyout, "%*cParameters List\n", level, ' ');
+    for(auto stmt : paramList){
+        stmt->output(level + 4);
+    }
 }

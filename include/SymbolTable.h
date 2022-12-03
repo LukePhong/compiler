@@ -6,14 +6,25 @@
 
 class Type;
 class Operand;
+#include <cassert>
+
+#include "Type.h"
+
+// class Type;
+// class IntType;
+// class FloatType;
 
 class SymbolEntry
 {
 private:
     int kind;
 protected:
-    enum {CONSTANT, VARIABLE, TEMPORARY};
+    //q2const常量支持
+    //把enum放入public使能在类外访问
+    // enum {CONSTANT, VARIABLE, TEMPORARY};
     Type *type;
+public:
+    enum EntryType{CONSTANT, VARIABLE, TEMPORARY};
 
 public:
     SymbolEntry(Type *type, int kind);
@@ -38,12 +49,17 @@ public:
 class ConstantSymbolEntry : public SymbolEntry
 {
 private:
-    int value;
+    int value_int;
+    //q6浮点数支持
+    float value_float;
 
 public:
     ConstantSymbolEntry(Type *type, int value);
+    ConstantSymbolEntry(Type *type, float value);
     virtual ~ConstantSymbolEntry() {};
-    int getValue() const {return value;};
+    // int getValue() const {return value_int;};
+    int getValueInt() const;
+    float getValueFloat() const;
     std::string toStr();
     // You can add any function you need here.
 };
@@ -71,6 +87,7 @@ public:
     | d        | LOCAL    |
     | e        | LOCAL +1 |
 */
+//就算是有DefStmt，符号表里面只要是有Identifier的那也不保存value
 class IdentifierSymbolEntry : public SymbolEntry
 {
 private:
@@ -81,16 +98,26 @@ private:
     // You can add any field you need here.
 
 public:
-    IdentifierSymbolEntry(Type *type, std::string name, int scope);
-    virtual ~IdentifierSymbolEntry() {};
-    std::string toStr();
     bool isGlobal() const {return scope == GLOBAL;};
     bool isParam() const {return scope == PARAM;};
     bool isLocal() const {return scope >= LOCAL;};
-    int getScope() const {return scope;};
     void setAddr(Operand *addr) {this->addr = addr;};
     Operand* getAddr() {return addr;};
+    //错了，我们语法分析时根本不知道这里是几维，因为里面可能是表达式等，无法在此时计算
+    //默认是0维
+    // std::vector<int> dimensions;
+
+public:
+    IdentifierSymbolEntry(Type *type, std::string name, int scope);
+    IdentifierSymbolEntry(Type *type, std::string name, int scope, SymbolEntry::EntryType entryType);
+    // IdentifierSymbolEntry(Type *type, std::string name, int scope, int value);
+    virtual ~IdentifierSymbolEntry() {};
+    std::string toStr();
+    int getScope() const {return scope;};
     // You can add any function you need here.
+    // void addDimension(int d);
+    // void setDimension(std::vector<int> d){dimensions = d;};
+    bool paramListMarch(std::vector<Type*> typeList);
 };
 
 
@@ -129,14 +156,21 @@ class SymbolTable
 {
 private:
     std::map<std::string, SymbolEntry*> symbolTable;
+    //q12函数调用
+    std::multimap<std::string, SymbolEntry*> funcTable;
     SymbolTable *prev;
     int level;
     static int counter;
+
 public:
     SymbolTable();
     SymbolTable(SymbolTable *prev);
     void install(std::string name, SymbolEntry* entry);
     SymbolEntry* lookup(std::string name);
+    //q12函数调用
+    SymbolEntry* lookup(std::string name, std::vector<Type*> typeList);
+    void installFunc(std::string name, SymbolEntry* entry);
+
     SymbolTable* getPrev() {return prev;};
     int getLevel() {return level;};
     static int getLabel() {return counter++;};
