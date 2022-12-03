@@ -17,7 +17,7 @@
     #include <string>
     #include <stdlib.h>
 
-    #ifdef ONLY_FOR_LEX
+    //#ifdef ONLY_FOR_LEX
     #include <ostream>
     #include <fstream>
     using namespace std;
@@ -38,7 +38,7 @@
         std::string DEBUG_INFO = "[DEBUG LAB4]: \t" + s + "\tline: " + std::to_string(row) + "\tcol: " + std::to_string(col) + "\n";
         fputs(DEBUG_INFO.c_str(), yyout);
     }
-    #endif
+    //#endif
 %}
 
 

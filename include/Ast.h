@@ -51,6 +51,7 @@ public:
     //获得符号表项
     SymbolEntry *getSymbolEntry(){return symbolEntry;}
 };
+
 //q12函数调用
 class FuncCall : public ExprNode{
 private:
@@ -59,6 +60,8 @@ private:
 public:
     FuncCall(SymbolEntry *symbolEntry, IdentifierSymbolEntry *def, std::vector<ExprNode*> arg) : ExprNode(symbolEntry), funcDef(def), arg(arg) {};
     void output(int level);
+    void typeCheck();
+    void genCode();
 };
 
 class BinaryExpr : public ExprNode
@@ -83,6 +86,8 @@ public:
     enum {SUB, LOGIC_NOT};
     UnaryExpr(SymbolEntry *se, int op, ExprNode*expr) : ExprNode(se), op(op), expr(expr){};
     void output(int level);
+    void typeCheck();
+    void genCode();
 };
 
 
@@ -118,6 +123,8 @@ public:
     void addDim(ExprNode* next);
     void output(int level);
     std::vector<ExprNode*>* getDimList() { return &dimList; };
+    void typeCheck();
+    void genCode();
 };
 
 //q9数组定义
@@ -133,7 +140,10 @@ public:
     void setLeaf(ExprNode* e){ expr = e;};
     ExprNode* getLeaf() { return expr; };
     void output(int level);
+    void typeCheck();
+    void genCode();
 };
+
 //q14数组取值
 class ArrayIndex : public ExprNode
 {
@@ -144,6 +154,8 @@ public:
     //临时项、原始定义、维度
     ArrayIndex(SymbolEntry *se, SymbolEntry *arr, DimArray* dim) : ExprNode(se) , arrDef(arr), dim(dim){};
     void output(int level);
+    void typeCheck();
+    void genCode();
 };
 
 
@@ -152,7 +164,10 @@ class EmptyStmt : public StmtNode
 public:
     EmptyStmt(){};
     void output(int level);
+    void typeCheck();
+    void genCode();
 };
+
 class ExprStmt : public StmtNode
 {
 private:
@@ -160,6 +175,8 @@ private:
 public:
     ExprStmt(ExprNode* exp) : exp(exp){};
     void output(int level);
+    void typeCheck();
+    void genCode();
 };
 
 class BreakStmt : public StmtNode
@@ -167,6 +184,8 @@ class BreakStmt : public StmtNode
 public:
     BreakStmt(){};
     void output(int level);
+    void typeCheck();
+    void genCode();
 };
 
 class ContinueStmt : public StmtNode
@@ -174,6 +193,8 @@ class ContinueStmt : public StmtNode
 public:
     ContinueStmt(){};
     void output(int level);
+    void typeCheck();
+    void genCode();
 };
 
 class CompoundStmt : public StmtNode
@@ -271,6 +292,8 @@ private:
 public:
     WhileStmt(ExprNode *cond, StmtNode *whileBodyStmt) : cond(cond), whileBodyStmt(whileBodyStmt){};
     void output(int level);
+    void typeCheck();
+    void genCode();
 };
 
 class ReturnStmt : public StmtNode
@@ -318,6 +341,8 @@ public:
     FuncParam(){};
     void addNext(StmtNode* next);
     void output(int level);
+    void typeCheck();
+    void genCode();
 };
 
 class Ast

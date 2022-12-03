@@ -61,7 +61,7 @@ void BinaryExpr::genCode()
 {
     BasicBlock *bb = builder->getInsertBB();
     Function *func = bb->getParent();
-    if (op == AND)
+    if (op == LOGIC_AND)
     {
         BasicBlock *trueBB = new BasicBlock(func);  // if the result of lhs is true, jump to the trueBB.
         expr1->genCode();
@@ -71,7 +71,7 @@ void BinaryExpr::genCode()
         true_list = expr2->trueList();
         false_list = merge(expr1->falseList(), expr2->falseList());
     }
-    else if(op == OR)
+    else if(op == LOGIC_OR)
     {
         // Todo
     }
@@ -149,30 +149,33 @@ void SeqNode::genCode()
 
 void DeclStmt::genCode()
 {
-    IdentifierSymbolEntry *se = dynamic_cast<IdentifierSymbolEntry *>(id->getSymPtr());
-    if(se->isGlobal())
-    {
-        Operand *addr;
-        SymbolEntry *addr_se;
-        addr_se = new IdentifierSymbolEntry(*se);
-        addr_se->setType(new PointerType(se->getType()));
-        addr = new Operand(addr_se);
-        se->setAddr(addr);
-    }
-    else if(se->isLocal())
-    {
-        Function *func = builder->getInsertBB()->getParent();
-        BasicBlock *entry = func->getEntry();
-        Instruction *alloca;
-        Operand *addr;
-        SymbolEntry *addr_se;
-        Type *type;
-        type = new PointerType(se->getType());
-        addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
-        addr = new Operand(addr_se);
-        alloca = new AllocaInstruction(addr, se);                   // allocate space for local id in function stack.
-        entry->insertFront(alloca);                                 // allocate instructions should be inserted into the begin of the entry block.
-        se->setAddr(addr);                                          // set the addr operand in symbol entry so that we can use it in subsequent code generation.
+    //配合idList
+    for (const auto id:idList){
+        IdentifierSymbolEntry *se = dynamic_cast<IdentifierSymbolEntry *>(id->getSymPtr());
+        if(se->isGlobal())
+        {
+            Operand *addr;
+            SymbolEntry *addr_se;
+            addr_se = new IdentifierSymbolEntry(*se);
+            addr_se->setType(new PointerType(se->getType()));
+            addr = new Operand(addr_se);
+            se->setAddr(addr);
+        }
+        else if(se->isLocal())
+        {
+            Function *func = builder->getInsertBB()->getParent();
+            BasicBlock *entry = func->getEntry();
+            Instruction *alloca;
+            Operand *addr;
+            SymbolEntry *addr_se;
+            Type *type;
+            type = new PointerType(se->getType());
+            addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
+            addr = new Operand(addr_se);
+            alloca = new AllocaInstruction(addr, se);                   // allocate space for local id in function stack.
+            entry->insertFront(alloca);                                 // allocate instructions should be inserted into the begin of the entry block.
+            se->setAddr(addr);                                          // set the addr operand in symbol entry so that we can use it in subsequent code generation.
+        }
     }
 }
 
@@ -193,7 +196,52 @@ void AssignStmt::genCode()
      */
     new StoreInstruction(addr, src, bb);
 }
+//------------------NEW GEN-CODE--------------------
+void FuncCall::genCode() {
 
+}
+
+void UnaryExpr::genCode() {
+
+}
+
+void DimArray::genCode() {
+
+}
+
+void ArrayDef::genCode() {
+
+}
+
+void ArrayIndex::genCode() {
+
+}
+
+void EmptyStmt::genCode() {
+
+}
+
+void ExprStmt::genCode() {
+
+}
+
+void BreakStmt::genCode() {
+
+}
+
+void ContinueStmt::genCode() {
+
+}
+
+void WhileStmt::genCode() {
+
+}
+
+void FuncParam::genCode() {
+
+}
+
+/*---------------------------TYPE CHECK----------------------------------------*/
 void Ast::typeCheck()
 {
     if(root != nullptr)
@@ -254,6 +302,51 @@ void AssignStmt::typeCheck()
 {
     // Todo
 }
+//------------------NEW TYPE CHECK--------------------
+void FuncCall::typeCheck() {
+
+}
+
+void UnaryExpr::typeCheck() {
+
+}
+
+void DimArray::typeCheck() {
+
+}
+
+void ArrayDef::typeCheck() {
+
+}
+
+void ArrayIndex::typeCheck() {
+
+}
+
+void EmptyStmt::typeCheck() {
+
+}
+
+void ExprStmt::typeCheck() {
+
+}
+
+void BreakStmt::typeCheck() {
+
+}
+
+void ContinueStmt::typeCheck() {
+
+}
+
+void WhileStmt::typeCheck() {
+
+}
+
+void FuncParam::typeCheck() {
+
+}
+
 
 
 void Ast::output()
@@ -329,7 +422,6 @@ void UnaryExpr::output(int level)
     expr->output(level + 4);
 }
 
-
 void Constant::output(int level)
 {
     std::string type, value;
@@ -368,6 +460,7 @@ void ArrayIndex::output(int level)
     dim->output(level + 4);
 }
 
+
 //q12函数调用
 void FuncCall::output(int level){
     fprintf(yyout, "%*cFunctionCall function name: %s, type: %s\n", level, ' ', 
@@ -377,10 +470,13 @@ void FuncCall::output(int level){
     }
 }
 
+
+
 void EmptyStmt::output(int level)
 {
     fprintf(yyout, "%*cEmptyStmt\n", level, ' ');
 }
+
 void ExprStmt::output(int level)
 {
     exp->output(level + 4);
@@ -445,6 +541,8 @@ void DimArray::output(int level)
         expr->output(level + 4);
     }
 }
+
+
 //q9数组定义
 void ArrayDef::addDef(ArrayDef* def)
 {
@@ -461,6 +559,7 @@ void ArrayDef::output(int level)
         itm->output(level + 4);
     }
 }
+
 //q9数组定义
 // void ArrayItem::addExpr(ExprNode* exp)
 // {
@@ -594,3 +693,5 @@ void FuncParam::output(int level)
         stmt->output(level + 4);
     }
 }
+
+
