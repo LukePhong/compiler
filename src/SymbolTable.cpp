@@ -169,6 +169,11 @@ void SymbolTable::installFunc(std::string name, SymbolEntry* entry){
 // install the entry into current symbol table.
 void SymbolTable::install(std::string name, SymbolEntry* entry)
 {
+    //p1同一作用域下重复声明
+    if(symbolTable.find(name) != symbolTable.end()){
+        std::cout<<"错误！相同作用域下变量重复声明！"<<std::endl;
+    }
+
     symbolTable[name] = entry;
 }
 

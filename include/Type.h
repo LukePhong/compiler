@@ -30,6 +30,8 @@ public:
     //q17参数列表模糊匹配
     //判断是否是数字类型
     bool isNumber() { return kind < 3; };
+    //p4二元运算类型检查
+    bool isArrayType() { return kind > FUNC; }
 };
 
 class IntType : public Type
@@ -112,6 +114,7 @@ private:
     Type *returnType;
     std::vector<Type*> paramsType;
 public:
+    FunctionType() : Type(Type::FUNC), returnType(nullptr) {};
     FunctionType(Type* returnType, std::vector<Type*> paramsType) : 
         Type(Type::FUNC), returnType(returnType), paramsType(paramsType){};
     std::string toStr();
@@ -130,6 +133,7 @@ private:
     static VoidType commonVoid;
     static ArrayIntType commonArrayInt;
     static ArrayFloatType commonArrayFloat;
+    static FunctionType commonFunc;
 public:
     static Type *intType;
     static Type *floatType;
@@ -137,6 +141,7 @@ public:
     static Type *boolType;
     static Type *arrayIntType;
     static Type *arrayFloatType;
+    static Type *funcType;
 };
 
 

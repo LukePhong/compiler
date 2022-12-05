@@ -7,6 +7,7 @@ VoidType TypeSystem::commonVoid = VoidType();
 BoolType TypeSystem::commonBool = BoolType(1);
 ArrayIntType TypeSystem::commonArrayInt = ArrayIntType(&commonInt);
 ArrayFloatType TypeSystem::commonArrayFloat = ArrayFloatType(&commonFloat);
+FunctionType TypeSystem::commonFunc = FunctionType();
 
 Type* TypeSystem::intType = &commonInt;
 Type* TypeSystem::floatType = &commonFloat;
@@ -14,6 +15,7 @@ Type* TypeSystem::voidType = &commonVoid;
 Type* TypeSystem::boolType = &commonBool;
 Type* TypeSystem::arrayIntType = &commonArrayInt;
 Type* TypeSystem::arrayFloatType = &commonArrayFloat;
+Type* TypeSystem::funcType = &commonFunc;
 
 std::string IntType::toStr()
 {

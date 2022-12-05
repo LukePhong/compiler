@@ -250,57 +250,106 @@ void Ast::typeCheck()
 
 void FunctionDef::typeCheck()
 {
-    // Todo
+    
+    if(params)
+        params->typeCheck();
+    stmt->typeCheck();
 }
 
 void BinaryExpr::typeCheck()
 {
-    // Todo
+    //p4二元运算类型检查
+    if(!(expr1->getSymbolEntry()->getType()->isNumber() &&
+        expr2->getSymbolEntry()->getType()->isNumber())){
+        std::cout<<"错误！二元运算出现非法类型！"<<std::endl;
+    }
+
+    expr1->typeCheck();
+    expr2->typeCheck();
 }
 
 void Constant::typeCheck()
 {
     // Todo
+
+    
 }
 
 void Id::typeCheck()
 {
     // Todo
+
+    
 }
 
 void IfStmt::typeCheck()
 {
     // Todo
+
+    cond->typeCheck();
+    thenStmt->typeCheck();
 }
 
 void IfElseStmt::typeCheck()
 {
     // Todo
+
+    cond->typeCheck();
+    thenStmt->typeCheck();
+    elseStmt->typeCheck();
 }
 
 void CompoundStmt::typeCheck()
 {
     // Todo
+
+    stmt->typeCheck();
 }
 
 void SeqNode::typeCheck()
 {
     // Todo
+
+
+    for (auto &&i : this->stmtList)
+    {
+        i->typeCheck();
+    }
+    
 }
 
 void DeclStmt::typeCheck()
 {
     // Todo
+
+    for (size_t i = 0; i < idList.size(); i++)
+    {
+        if(idList[i])
+            idList[i]->typeCheck();
+        if(exprList[i])
+            exprList[i]->typeCheck();
+        if(dimArrayList[i])
+            dimArrayList[i]->typeCheck();
+        if(defArrList[i])
+            defArrList[i]->typeCheck();
+    }
+    
 }
 
 void ReturnStmt::typeCheck()
 {
     // Todo
+
+    if(retValue)
+        retValue->typeCheck();
 }
 
 void AssignStmt::typeCheck()
 {
     // Todo
+
+    lval->typeCheck();
+    expr->typeCheck();
 }
 //------------------NEW TYPE CHECK--------------------
 void FuncCall::typeCheck() {
@@ -308,19 +357,36 @@ void FuncCall::typeCheck() {
 }
 
 void UnaryExpr::typeCheck() {
+    //p4二元运算类型检查
+    // if(!(expr->getSymbolEntry()->getType()->isNumber())){
+    //     std::cout<<"错误！一元运算出现非法类型！"<<std::endl;
+    // }
 
+    expr->typeCheck();
 }
 
 void DimArray::typeCheck() {
 
+
+    for (auto &&i : dimList)
+    {
+        i->typeCheck();
+    }
 }
 
 void ArrayDef::typeCheck() {
 
+
+    for (auto &&i : this->arrDefList)
+    {
+        i->typeCheck();
+    }
+    this->expr->typeCheck();
 }
 
 void ArrayIndex::typeCheck() {
 
+    this->dim->typeCheck();
 }
 
 void EmptyStmt::typeCheck() {
@@ -329,9 +395,11 @@ void EmptyStmt::typeCheck() {
 
 void ExprStmt::typeCheck() {
 
+    exp->typeCheck();
 }
 
 void BreakStmt::typeCheck() {
+
 
 }
 
@@ -341,10 +409,17 @@ void ContinueStmt::typeCheck() {
 
 void WhileStmt::typeCheck() {
 
+    cond->typeCheck();
+    whileBodyStmt->typeCheck();
 }
 
 void FuncParam::typeCheck() {
 
+    for (auto &&i : paramList)
+    {
+        i->typeCheck();
+    }
+    
 }
 
 

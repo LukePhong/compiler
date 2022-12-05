@@ -250,7 +250,14 @@ ReturnStmt
 
 Exp
     :
-    LOrExp {$$ = $1;}
+    LOrExp {
+        //p3表达式结果不能为void
+        if($1->getSymbolEntry()->getType()->getKind() == TypeSystem::voidType->getKind()
+            || $1->getSymbolEntry()->getType()->getKind() == TypeSystem::funcType->getKind()){
+            std::cout<<"错误！表达式结果为VOID类型或FUNC类型！"<<std::endl;
+        }
+        $$ = $1;
+    }
     ;
 
 //逻辑或运算
@@ -351,7 +358,13 @@ RelExp
 //if括号内
 Cond
     :
-    LOrExp {$$ = $1;}
+    LOrExp {
+        //p2条件表达式结果类型
+        if($1->getSymbolEntry()->getType()->getKind() > TypeSystem::floatType->getKind()){
+            std::cout<<"错误！条件判断结果不合法！"<<std::endl;
+        }
+        $$ = $1;
+    }
     ;
 
 //加法表达式
@@ -428,13 +441,13 @@ UnaryExp
     |
     LOGIC_NOT UnaryExp
     {
+        //p4二元运算类型检查
+        if(!$2->getSymbolEntry()->getType()->isNumber()){
+            std::cout<<"错误！一元运算出现非法类型！"<<std::endl;
+        }
         //q6浮点数支持
-        // SymbolEntry *se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
         SymbolEntry *se;
-        //if($2->getSymbolEntry()->getType()->isInt())
         se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
-        //else
-            //se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
         $$ = new UnaryExpr(se, UnaryExpr::LOGIC_NOT, $2);
     }
     ;
@@ -463,8 +476,9 @@ PrimaryExp
     ;
 
 Type
-    //这里使得符号表项中的的Type指针能指Type类型的值
-    : INT {
+    : 
+    INT {
+        //这里使得符号表项中的的Type指针能指Type类型的值
         $$ = TypeSystem::intType;
         upperType = TypeSystem::intType;
     }

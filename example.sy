@@ -1,11 +1,19 @@
+void func(){
+    return;
+}
+
 int main()
 {
     int a;
     int b;
+    int c[2];
     int min;
     a = 1 + 2 + 3;
     b = 2 + 3 + 4;
-    if (a < b)
+    c[0] = c;
+    c[0] = 1 + c;
+    c[0] = !c;
+    if (1)
         min = a;
     else
         min = b;
