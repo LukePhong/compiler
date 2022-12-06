@@ -10,6 +10,10 @@ extern FILE *yyout;
 int Node::counter = 0;
 IRBuilder* Node::builder = nullptr;
 
+struct flags{
+    bool exprShouldCheck = true;
+} flag;
+
 Node::Node()
 {
     seq = counter++;
@@ -264,6 +268,10 @@ void BinaryExpr::typeCheck()
         std::cout<<"错误！二元运算出现非法类型！"<<std::endl;
     }
 
+    //p8孤立Expr关闭void检查
+    //不再需要结果类型检查
+    flag.exprShouldCheck = true;
+
     expr1->typeCheck();
     expr2->typeCheck();
 }
@@ -271,14 +279,18 @@ void BinaryExpr::typeCheck()
 void Constant::typeCheck()
 {
     // Todo
-
+//p8孤立Expr关闭void检查
+    //不再需要结果类型检查
+    flag.exprShouldCheck = true;
     
 }
 
 void Id::typeCheck()
 {
     // Todo
-
+    //p8孤立Expr关闭void检查
+    //不再需要结果类型检查
+    flag.exprShouldCheck = true;
     
 }
 
@@ -321,9 +333,21 @@ void SeqNode::typeCheck()
 void DeclStmt::typeCheck()
 {
     // Todo
-
     for (size_t i = 0; i < idList.size(); i++)
     {
+        //p5赋值运算类型检查
+        if(dimArrayList[i] == nullptr && exprList[i] != nullptr &&
+            !(idList[i]->getSymbolEntry()->getType()->isNumber() && 
+            exprList[i]->getSymbolEntry()->getType()->isNumber()))
+        {
+            std::cout<<"错误！定义时赋值类型不匹配！"<<std::endl;
+        }
+        //p6CONST检查
+        if(idList[i]->getSymbolEntry()->isConstant() &&
+            (exprList[i] == nullptr && defArrList[i] == nullptr)){
+            std::cout<<"错误！CONST未初始化！"<<std::endl;
+        }
+
         if(idList[i])
             idList[i]->typeCheck();
         if(exprList[i])
@@ -346,7 +370,16 @@ void ReturnStmt::typeCheck()
 
 void AssignStmt::typeCheck()
 {
-    // Todo
+    //p5赋值运算类型检查
+    if(!(lval->getSymbolEntry()->getType()->isNumber() && 
+        expr->getSymbolEntry()->getType()->isNumber()))
+    {   
+        std::cout<<"错误！运算赋值时类型不匹配！"<<std::endl;
+    }
+    //p6CONST检查
+    if(lval->getSymbolEntry()->isConstant()){
+        std::cout<<"错误！CONST不能被修改！"<<std::endl;
+    }
 
     lval->typeCheck();
     expr->typeCheck();
@@ -354,6 +387,18 @@ void AssignStmt::typeCheck()
 //------------------NEW TYPE CHECK--------------------
 void FuncCall::typeCheck() {
 
+    //p8孤立Expr关闭void检查
+    if(flag.exprShouldCheck){
+        if(((FunctionType*)(funcDef->getType()))->getRetType()->getKind() == TypeSystem::voidType->getKind()){
+            std::cout<<"错误！函数返回类型为VOID无法运算！"<<std::endl;
+        }
+    }
+    flag.exprShouldCheck = true;
+
+    for (auto &&i : arg)
+    {
+        i->typeCheck();
+    }
 }
 
 void UnaryExpr::typeCheck() {
@@ -361,6 +406,10 @@ void UnaryExpr::typeCheck() {
     // if(!(expr->getSymbolEntry()->getType()->isNumber())){
     //     std::cout<<"错误！一元运算出现非法类型！"<<std::endl;
     // }
+
+    //p8孤立Expr关闭void检查
+    //不再需要结果类型检查
+    flag.exprShouldCheck = true;
 
     expr->typeCheck();
 }
@@ -381,7 +430,13 @@ void ArrayDef::typeCheck() {
     {
         i->typeCheck();
     }
-    this->expr->typeCheck();
+    if(this->expr){
+        //p5赋值运算类型检查
+        if(!this->expr->getSymbolEntry()->getType()->isNumber()){
+            std::cout<<"错误！数组定义出现非法初值！"<<std::endl;
+        }
+        this->expr->typeCheck();
+    }
 }
 
 void ArrayIndex::typeCheck() {
@@ -395,6 +450,9 @@ void EmptyStmt::typeCheck() {
 
 void ExprStmt::typeCheck() {
 
+    //p8孤立Expr关闭void检查
+    //孤立的Expr+分号，关闭结果类型检查
+    flag.exprShouldCheck = false;
     exp->typeCheck();
 }
 

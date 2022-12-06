@@ -65,7 +65,7 @@
 %token COMMA
 
 %nterm <stmttype> Stmts Stmt AssignStmt BlockStmt IfStmt ReturnStmt DeclStmt FuncDef BreakStmt ContinueStmt 
-                    WhileStmt DimArray ArrayDefBlock ArrayDef FuncParam //ArrayParam//FuncParamList DefStmt
+                    WhileStmt DimArray ArrayDefBlock ArrayDef FuncParam ExprStmt
 %nterm <exprtype> Exp AddExp Cond LOrExp PrimaryExp LVal RelExp LAndExp UnaryExp MulExp FuncCall ArrayIndex
 %nterm <type> Type
 
@@ -109,7 +109,9 @@ Stmt
     /* | DefStmt {$$=$1;} */
     // 单分号（空语句）
     | SEMICOLON {$$ = new EmptyStmt();}
-    | Exp SEMICOLON { $$; }
+    //以下操作yacc会自动把exp强制转型为Stmt
+    //| Exp SEMICOLON {  }
+    | ExprStmt { $$ = $1; }
     | BreakStmt {$$ = $1;}
     | ContinueStmt {$$ = $1;}
     | WhileStmt {$$ = $1;}
@@ -247,15 +249,21 @@ ReturnStmt
     }
     ;
 
+ExprStmt
+    :
+    Exp SEMICOLON{
+        $$ = new ExprStmt($1);
+    }
+    ;
 
 Exp
     :
     LOrExp {
         //p3表达式结果不能为void
-        if($1->getSymbolEntry()->getType()->getKind() == TypeSystem::voidType->getKind()
-            || $1->getSymbolEntry()->getType()->getKind() == TypeSystem::funcType->getKind()){
-            std::cout<<"错误！表达式结果为VOID类型或FUNC类型！"<<std::endl;
-        }
+        // if($1->getSymbolEntry()->getType()->getKind() == TypeSystem::voidType->getKind()
+        //     || $1->getSymbolEntry()->getType()->getKind() == TypeSystem::funcType->getKind()){
+        //     std::cout<<"错误！表达式结果为VOID类型或FUNC类型！"<<std::endl;
+        // }
         $$ = $1;
     }
     ;
@@ -576,15 +584,15 @@ DeclStmt
             if (i.dim){
                 if($2->isInt()){
                     auto t = new ArrayIntType(*(((DimArray*)i.dim)->getDimList()), $2);
-                    se = new IdentifierSymbolEntry(t, i.name, i.level);
+                    se = new IdentifierSymbolEntry(t, i.name, i.level, SymbolEntry::CONSTANT);
                 }
                 else{
                     auto t = new ArrayFloatType(*(((DimArray*)i.dim)->getDimList()), $2);
-                    se = new IdentifierSymbolEntry(t, i.name, i.level);
+                    se = new IdentifierSymbolEntry(t, i.name, i.level, SymbolEntry::CONSTANT);
                 }
             }
             else
-                se = new IdentifierSymbolEntry($2, i.name, i.level);
+                se = new IdentifierSymbolEntry($2, i.name, i.level, SymbolEntry::CONSTANT);
             identifiers->install(i.name, se);
             //q3添加DefStmt变量常量定义语句
             if(i.isDef)
@@ -764,14 +772,30 @@ FuncDef
     //q10添加参数列表
     LPAREN FuncParam {
         SymbolEntry *se;
+        if(tempParaType.empty()){
+            tempParaType.push_back(TypeSystem::voidType);
+        }
+        //p7函数重复重载
+        se = identifiers->lookup($2, tempParaType);
+        if(se){
+            fprintf(stderr, "function identifier \"%s\" is already defined\n", (char*)$2);
+            // delete [](char*)$2;
+        }
         se = identifiers->lookup($2, {});
         assert(se != nullptr);
-        // cout<<tempParaType.size()<<endl;
         ((FunctionType*)(se->getType()))->setParamsType(tempParaType);
     } RPAREN
     BlockStmt
     {
         SymbolEntry *se;
+
+        //p7函数重复重载
+        // if(identifiers->lookupcount($2, tempParaType) > 1){
+        //     std::cout<<"错误！同一函数多次定义！"<<std::endl;
+        //     // assert(identifiers->lookupcount($2, tempParaType) == 1);
+        //     // panic();
+        // }
+
         se = identifiers->lookup($2, tempParaType);
         assert(se != nullptr);
         $$ = new FunctionDef(se, $5, $8);
@@ -789,8 +813,16 @@ FuncCall
     ID LPAREN FuncArg RPAREN {
         //查看符号表中是否存在
         SymbolEntry *se;
+         if(vecArgType.back().empty()){
+            vecArgType.back().push_back(TypeSystem::voidType);
+        }
         se = identifiers->lookup($1, vecArgType.back());
-        assert(se != nullptr);
+        if(se == nullptr)
+        {
+            fprintf(stderr, "function identifier \"%s\" is undefined\n", (char*)$1);
+            delete [](char*)$1;
+            assert(se != nullptr);
+        }
         // 新建一个temp符号表项
         auto tempSe = new TemporarySymbolEntry(((FunctionType*)(se->getType()))->getReturnType(), SymbolTable::getLabel());
         // 新建语法树节点，符号表项、expr的向量、临时符号表项

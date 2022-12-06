@@ -169,6 +169,8 @@ public:
     SymbolEntry* lookup(std::string name);
     //q12函数调用
     SymbolEntry* lookup(std::string name, std::vector<Type*> typeList);
+    //p7函数重复重载
+    int lookupcount(std::string name, std::vector<Type*> typeList);
     void installFunc(std::string name, SymbolEntry* entry);
 
     SymbolTable* getPrev() {return prev;};

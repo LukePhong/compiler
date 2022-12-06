@@ -2,17 +2,27 @@ void func(){
     return;
 }
 
+void func(float a){
+    return;
+}
+
 int main()
 {
     int a;
-    int b;
+    const int b;
+    func(a);
+    1;
+    1+1;
+    a;
+    func(a);
     int c[2];
     int min;
     a = 1 + 2 + 3;
     b = 2 + 3 + 4;
-    c[0] = c;
-    c[0] = 1 + c;
-    c[0] = !c;
+    //c[0] = c;
+    //c[0] = 1 + c;
+    //c[0] = !c;
+    //int aa = 1 + c;
     if (1)
         min = a;
     else

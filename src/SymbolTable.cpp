@@ -64,14 +64,14 @@ bool IdentifierSymbolEntry::paramListMarch(std::vector<Type*> typeList){
 
     std::vector<Type*> targetList = ((FunctionType*)type)->getParamsType();
     if (typeList.size() != targetList.size()){
-        std::cout<<typeList.size()<<" "<<targetList.size()<<std::endl;
+        // std::cout<<"参数列表长度不匹配 "<<typeList.size()<<" "<<targetList.size()<<std::endl;
         return false;
     }
     for (size_t i = 0; i < typeList.size(); i++)
     {
         //q17参数列表模糊匹配
         if(typeList[i]->getKind() != targetList[i]->getKind() && !(typeList[i]->isNumber() && targetList[i]->isNumber()) ){
-            std::cout<<typeList[i]->getKind()<<" "<<targetList[i]->getKind()<<std::endl;
+            // std::cout<<"参数类型不匹配 "<<typeList[i]->getKind()<<" "<<targetList[i]->getKind()<<std::endl;
             return false;
         }
     }
@@ -147,8 +147,15 @@ SymbolEntry* SymbolTable::lookup(std::string name, std::vector<Type*> typeList){
         // std::cout<<"hello3"<<std::endl;
         auto pr = funcTable.equal_range(name);
         for (auto iter = pr.first ; iter != pr.second; ++iter){
-            if(((IdentifierSymbolEntry*)(iter->second))->paramListMarch(typeList))
+            if(((IdentifierSymbolEntry*)(iter->second))->paramListMarch(typeList)){
+                // for (auto inner = iter++; inner != pr.second; inner++)
+                // {
+                //     if(((IdentifierSymbolEntry*)(inner->second))->paramListMarch(typeList)){
+                //         std::cout<<"错误！同一函数多次定义！"<<std::endl;
+                //     }
+                // }
                 return iter->second;
+            }
         }
         return nullptr;
     }
@@ -160,6 +167,28 @@ SymbolEntry* SymbolTable::lookup(std::string name, std::vector<Type*> typeList){
             return nullptr;
         }
     }
+}
+//p7函数重复重载
+int SymbolTable::lookupcount(std::string name, std::vector<Type*> typeList){
+    int count = 0;
+    // 同时满足名字和参数列表相同才返回
+    if(funcTable.find(name)!=funcTable.end()){
+        auto pr = funcTable.equal_range(name);
+        for (auto iter = pr.first ; iter != pr.second; ++iter){
+            if(((IdentifierSymbolEntry*)(iter->second))->paramListMarch(typeList)){
+                count++;
+            }
+        }
+        // return nullptr;
+    }
+    // else{
+    if(prev != nullptr){
+        return count + prev->lookupcount(name, typeList);
+    }
+    else{
+        return count;
+    }
+    // }
 }
 //q12函数调用
 void SymbolTable::installFunc(std::string name, SymbolEntry* entry){
