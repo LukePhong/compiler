@@ -4,6 +4,7 @@
 #include "Instruction.h"
 #include "IRBuilder.h"
 #include <string>
+#include <stack>
 #include "Type.h"
 
 extern FILE *yyout;
@@ -12,6 +13,12 @@ IRBuilder* Node::builder = nullptr;
 
 struct flags{
     bool exprShouldCheck = true;
+    Type* shouldReturn;
+    bool isInFunc = false;
+    bool isInWhile = false;
+
+    std::stack<int> cntEle;
+    
 } flag;
 
 Node::Node()
@@ -254,10 +261,12 @@ void Ast::typeCheck()
 
 void FunctionDef::typeCheck()
 {
-    
+    flag.isInFunc = true;   
     if(params)
         params->typeCheck();
+    flag.shouldReturn = ((FunctionType*)(se->getType()))->getRetType();
     stmt->typeCheck();
+    flag.isInFunc = false;
 }
 
 void BinaryExpr::typeCheck()
@@ -363,6 +372,19 @@ void DeclStmt::typeCheck()
 void ReturnStmt::typeCheck()
 {
     // Todo
+    //p9函数返回类型检查
+    if(!flag.isInFunc){
+        std::cout<<"错误！函数外使用return语句！"<<std::endl;
+        return;
+    }
+    assert(flag.shouldReturn != nullptr);
+    if(flag.shouldReturn == TypeSystem::voidType){
+        if(retValue){
+            std::cout<<"错误！函数返回类型为VOID但是给出了返回值！"<<std::endl;
+        }
+    }else if(!retValue || !retValue->getSymbolEntry()->getType()->isNumber()){
+        std::cout<<"错误！函数实际返回类型与定义不符！"<<std::endl;
+    }
 
     if(retValue)
         retValue->typeCheck();
@@ -419,6 +441,9 @@ void DimArray::typeCheck() {
 
     for (auto &&i : dimList)
     {
+        if(!i->getSymbolEntry()->getType()->isInt()){
+            std::cout<<"错误！数组下标不是整数！"<<std::endl;
+        }   
         i->typeCheck();
     }
 }
@@ -458,17 +483,25 @@ void ExprStmt::typeCheck() {
 
 void BreakStmt::typeCheck() {
 
+    if(!flag.isInWhile){
+        std::cout<<"错误！Break语句出现在非法位置！"<<std::endl;
+    }
 
 }
 
 void ContinueStmt::typeCheck() {
-
+    if(!flag.isInWhile){
+        std::cout<<"错误！Continue语句出现在非法位置！"<<std::endl;
+    }
 }
 
 void WhileStmt::typeCheck() {
 
+    //p10break\continue的位置检查
+    flag.isInWhile = true;
     cond->typeCheck();
     whileBodyStmt->typeCheck();
+    flag.isInWhile = false;
 }
 
 void FuncParam::typeCheck() {

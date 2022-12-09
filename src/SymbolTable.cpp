@@ -11,12 +11,14 @@ SymbolEntry::SymbolEntry(Type *type, int kind)
 ConstantSymbolEntry::ConstantSymbolEntry(Type *type, int value) : SymbolEntry(type, SymbolEntry::CONSTANT)
 {
     this->value_int = value;
+    // IsInt = true;
 }
 
 //q6浮点数支持
 ConstantSymbolEntry::ConstantSymbolEntry(Type *type, float value) : SymbolEntry(type, SymbolEntry::CONSTANT)
 {
     this->value_float = value;
+    // IsInt = false;
 }
 
 //q6浮点数支持

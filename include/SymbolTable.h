@@ -52,12 +52,14 @@ private:
     int value_int;
     //q6浮点数支持
     float value_float;
+    // bool IsInt;
 
 public:
     ConstantSymbolEntry(Type *type, int value);
     ConstantSymbolEntry(Type *type, float value);
     virtual ~ConstantSymbolEntry() {};
-    // int getValue() const {return value_int;};
+    // void* getValue() const {return (void*)(isInt ? value_int : value_float);};
+    bool isInt() { return type->isInt(); };
     int getValueInt() const;
     float getValueFloat() const;
     std::string toStr();

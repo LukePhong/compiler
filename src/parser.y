@@ -383,12 +383,15 @@ AddExp
     AddExp ADD MulExp
     {
         SymbolEntry *se;
-        // if($1->getSymbolEntry()->getType()->isInt() && $3->getSymbolEntry()->getType()->isInt())
-        //     se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        // else
-        //     se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
         int k1 = $1->getSymbolEntry()->getType()->getKind(),k2 = $3->getSymbolEntry()->getType()->getKind();
-        se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
+        if($1->getSymbolEntry()->isConstant() && $3->getSymbolEntry()->isConstant()){
+            ConstantSymbolEntry *temp1 = (ConstantSymbolEntry*)($1->getSymbolEntry()), *temp2 = (ConstantSymbolEntry*)($3->getSymbolEntry());
+            se = new ConstantSymbolEntry( k1 >= k2 ? temp1->getType() : temp2->getType(),
+            (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) + (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
+        } else{
+            se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
+        }
+        // se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
         $$ = new BinaryExpr(se, BinaryExpr::ADD, $1, $3);
     }
     |
@@ -396,7 +399,14 @@ AddExp
     {
         SymbolEntry *se;
         int k1 = $1->getSymbolEntry()->getType()->getKind(),k2 = $3->getSymbolEntry()->getType()->getKind();
-        se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
+        if($1->getSymbolEntry()->isConstant() && $3->getSymbolEntry()->isConstant()){
+            ConstantSymbolEntry *temp1 = (ConstantSymbolEntry*)($1->getSymbolEntry()), *temp2 = (ConstantSymbolEntry*)($3->getSymbolEntry());
+            se = new ConstantSymbolEntry( k1 >= k2 ? temp1->getType() : temp2->getType(),
+            (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) - (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
+        } else{
+            se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
+        }
+        // se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
         $$ = new BinaryExpr(se, BinaryExpr::SUB, $1, $3);
     }
     ;
@@ -409,7 +419,13 @@ MulExp
     {
         SymbolEntry *se;
         int k1 = $1->getSymbolEntry()->getType()->getKind(),k2 = $3->getSymbolEntry()->getType()->getKind();
-        se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
+        if($1->getSymbolEntry()->isConstant() && $3->getSymbolEntry()->isConstant()){
+            ConstantSymbolEntry *temp1 = (ConstantSymbolEntry*)($1->getSymbolEntry()), *temp2 = (ConstantSymbolEntry*)($3->getSymbolEntry());
+            se = new ConstantSymbolEntry( k1 >= k2 ? temp1->getType() : temp2->getType(),
+            (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) * (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
+        } else{
+            se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
+        }
         $$ = new BinaryExpr(se, BinaryExpr::PRODUCT, $1, $3);
     }
     |
@@ -417,7 +433,14 @@ MulExp
     {
         SymbolEntry *se;
         int k1 = $1->getSymbolEntry()->getType()->getKind(),k2 = $3->getSymbolEntry()->getType()->getKind();
-        se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
+        if($1->getSymbolEntry()->isConstant() && $3->getSymbolEntry()->isConstant()){
+            ConstantSymbolEntry *temp1 = (ConstantSymbolEntry*)($1->getSymbolEntry()), *temp2 = (ConstantSymbolEntry*)($3->getSymbolEntry());
+            se = new ConstantSymbolEntry( k1 >= k2 ? temp1->getType() : temp2->getType(),
+            (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) / (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
+        } else{
+            se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
+        }
+        // se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
         $$ = new BinaryExpr(se, BinaryExpr::DIVISION, $1, $3);
     }
     |
@@ -425,7 +448,17 @@ MulExp
     {
         SymbolEntry *se;
         int k1 = $1->getSymbolEntry()->getType()->getKind(),k2 = $3->getSymbolEntry()->getType()->getKind();
-        se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
+        if($1->getSymbolEntry()->getType()->isFloat() || $3->getSymbolEntry()->getType()->isFloat()){
+            std::cout<<"错误！取余两个运算符必须均为整数！"<<std::endl;
+        }
+        if($1->getSymbolEntry()->isConstant() && $3->getSymbolEntry()->isConstant()){
+            ConstantSymbolEntry *temp1 = (ConstantSymbolEntry*)($1->getSymbolEntry()), *temp2 = (ConstantSymbolEntry*)($3->getSymbolEntry());
+            se = new ConstantSymbolEntry( k1 >= k2 ? temp1->getType() : temp2->getType(),
+            (temp1->isInt() ? temp1->getValueInt() : (int)temp1->getValueFloat()) % (temp2->isInt() ? temp2->getValueInt() : (int)temp2->getValueFloat()));
+        } else{
+            se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
+        }
+        // se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
         $$ = new BinaryExpr(se, BinaryExpr::REMAINDER, $1, $3);
     }
     ;
@@ -440,10 +473,17 @@ UnaryExp
     {
         //q6浮点数支持
         SymbolEntry *se;
-        if($2->getSymbolEntry()->getType()->isInt())
-            se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        else
-            se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
+        //p11计算常量数值
+        if($2->getSymbolEntry()->isConstant()){
+            se = new ConstantSymbolEntry($2->getSymbolEntry()->getType(), 
+                -(((ConstantSymbolEntry*)($2->getSymbolEntry()))->isInt() ? ((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueInt() : ((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueFloat()));
+        }else{
+            // if($2->getSymbolEntry()->getType()->isInt())
+            //     se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
+            // else
+            //     se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
+            se = new TemporarySymbolEntry($2->getSymbolEntry()->getType(), SymbolTable::getLabel());
+        }
         $$ = new UnaryExpr(se, UnaryExpr::SUB, $2);
     }
     |
@@ -455,7 +495,12 @@ UnaryExp
         }
         //q6浮点数支持
         SymbolEntry *se;
-        se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
+        if($2->getSymbolEntry()->isConstant()){
+            se = new ConstantSymbolEntry($2->getSymbolEntry()->getType(), 
+                !(((ConstantSymbolEntry*)($2->getSymbolEntry()))->isInt()? ((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueInt() : ((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueFloat()));
+        }else{
+            se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
+        }
         $$ = new UnaryExpr(se, UnaryExpr::LOGIC_NOT, $2);
     }
     ;
@@ -535,6 +580,20 @@ DeclStmt
         SymbolEntry *se;
         auto n = new DeclStmt();
         for(auto i:tempDecl){
+            //p12数组定义检查下标可计算
+            if(i.dim){
+                for(auto& idx:*(((DimArray*)(i.dim))->getDimList())){
+                    if(!idx->getSymbolEntry()->isConstant()){
+                        std::cout<<"错误！数组定义下标为变量！"<<std::endl;
+                        break;
+                    }
+                    if(!idx->getSymbolEntry()->getType()->isInt()){
+                        std::cout<<"错误！数组定义下标不是整数！"<<std::endl;
+                        break;
+                    }
+                }
+            }
+
             if (i.dim){
                 if($1->isInt()){
                     // std::cout<<"hello1"<<std::endl;
@@ -581,6 +640,20 @@ DeclStmt
         SymbolEntry *se;
         auto n = new DeclStmt();
         for(auto i:tempDecl){
+            //p12数组定义检查下标可计算
+            if(i.dim){
+                for(auto& idx:*(((DimArray*)(i.dim))->getDimList())){
+                    if(!idx->getSymbolEntry()->isConstant()){
+                        std::cout<<"错误！数组定义下标为变量！"<<std::endl;
+                        break;
+                    }
+                    if(!idx->getSymbolEntry()->getType()->isInt()){
+                        std::cout<<"错误！数组定义下标不是整数！"<<std::endl;
+                        break;
+                    }
+                }
+            }
+
             if (i.dim){
                 if($2->isInt()){
                     auto t = new ArrayIntType(*(((DimArray*)i.dim)->getDimList()), $2);
@@ -761,6 +834,10 @@ ArrayIndex
 FuncDef
     :
     Type ID {
+        //p9函数返回类型检查
+        if(!$1->isNumber() && $1 != TypeSystem::voidType){
+            std::cout<<"错误！函数返回类型非法！"<<std::endl;
+        }
         Type *funcType;
         //设定返回类型
         funcType = new FunctionType($1,{});
