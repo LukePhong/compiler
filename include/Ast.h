@@ -48,7 +48,7 @@ class ExprNode : public Node
 {
 protected:
     SymbolEntry *symbolEntry;
-    Operand *dst;   // The result of the subtree is stored into dst.
+    Operand *dst;   // The result of the subtree is stored into dst.    综合属性
 public:
     ExprNode(SymbolEntry *symbolEntry) : symbolEntry(symbolEntry){};
     Operand* getOperand() {return dst;};

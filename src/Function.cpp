@@ -9,6 +9,8 @@ Function::Function(Unit *u, SymbolEntry *s)
 {
     u->insertFunc(this);
     entry = new BasicBlock(this);
+    //q4为function加入exit块
+    exit = new BasicBlock(this);
     sym_ptr = s;
     parent = u;
 }

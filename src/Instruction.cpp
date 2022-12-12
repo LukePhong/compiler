@@ -55,6 +55,7 @@ Instruction *Instruction::getPrev()
 BinaryInstruction::BinaryInstruction(unsigned opcode, Operand *dst, Operand *src1, Operand *src2, BasicBlock *insert_bb) : Instruction(BINARY, insert_bb)
 {
     this->opcode = opcode;
+    //pushback顺序不能改变
     operands.push_back(dst);
     operands.push_back(src1);
     operands.push_back(src2);

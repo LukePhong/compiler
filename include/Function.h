@@ -20,6 +20,8 @@ private:
     std::vector<BasicBlock *> block_list;
     SymbolEntry *sym_ptr;
     BasicBlock *entry;
+    //q4为function加入exit块
+    BasicBlock *exit;
     Unit *parent;
 
 public:
@@ -27,6 +29,7 @@ public:
     ~Function();
     void insertBlock(BasicBlock *bb) { block_list.push_back(bb); };
     BasicBlock *getEntry() { return entry; };
+    BasicBlock *getExit() { return exit; };
     void remove(BasicBlock *bb);
     void output() const;
     std::vector<BasicBlock *> &getBlockList(){return block_list;};

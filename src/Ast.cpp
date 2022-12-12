@@ -59,12 +59,59 @@ void FunctionDef::genCode()
     // set the insert point to the entry basicblock of this function.
     builder->setInsertBB(entry);
 
+    if(params!=nullptr){
+        params->genCode();
+    }
     stmt->genCode();
 
     /**
      * Construct control flow graph. You need do set successors and predecessors for each basic block.
      * Todo
     */
+
+    std::vector<BasicBlock*> toExit;
+   //q3function连接基本块
+   auto bl = func->getBlockList();
+   for (auto &&i : bl)
+   {
+        //去除ret后面还有指令的情况
+        bool shouldErase = false;
+        for(auto j = i->begin(); j != i->end(); j = j->getNext()){
+            if(shouldErase){
+                i->remove(j);
+            }
+            if(j->isRet()){
+                shouldErase = true;
+            }
+        }
+        if(shouldErase){
+            toExit.push_back(i);
+        }
+
+        auto lastInst = i->rbegin();
+        if(lastInst->isUncond()){
+            auto toBB = ((UncondBrInstruction*)lastInst)->getBranch();
+            i->addSucc(toBB);
+            toBB->addPred(i);
+        }else if(lastInst->isCond()){
+            auto toBB_t = ((CondBrInstruction*)lastInst)->getTrueBranch();
+            auto toBB_f = ((CondBrInstruction*)lastInst)->getFalseBranch();
+            i->addSucc(toBB_t);
+            i->addSucc(toBB_f);
+            toBB_t->addPred(i);
+            toBB_f->addPred(i);
+        }else if(lastInst->isRet()){}
+   }
+   
+    BasicBlock *exit = func->getExit();
+    // set the insert point to the entry basicblock of this function.
+    builder->setInsertBB(exit);
+   //q4为function加入exit块
+   for (auto &&i : toExit)
+   {
+        exit->addPred(i);
+        i->addSucc(exit);
+   }
    
 }
 
@@ -151,11 +198,19 @@ void IfElseStmt::genCode()
 void CompoundStmt::genCode()
 {
     // Todo
+    //q2补全代码生成调用链
+    stmt->genCode();
 }
 
 void SeqNode::genCode()
 {
     // Todo
+    //q2补全代码生成调用链
+    for (auto &&i : stmtList)
+    {
+        i->genCode();
+    }
+    
 }
 
 void DeclStmt::genCode()
@@ -210,22 +265,41 @@ void AssignStmt::genCode()
 //------------------NEW GEN-CODE--------------------
 void FuncCall::genCode() {
 
+    //q2补全代码生成调用链
+    for (auto &&i : arg)
+    {
+        i->genCode();
+    }
+    
 }
 
 void UnaryExpr::genCode() {
-
+    
+    //q2补全代码生成调用链
+    expr->genCode();
 }
 
 void DimArray::genCode() {
 
+    for (auto &&i : dimList)
+    {
+        i->genCode();
+    }
+    
 }
 
 void ArrayDef::genCode() {
 
+    for (auto &&i : arrDefList)
+    {
+        i->genCode();
+    }
+    
 }
 
 void ArrayIndex::genCode() {
 
+    dim->genCode();
 }
 
 void EmptyStmt::genCode() {
@@ -234,6 +308,7 @@ void EmptyStmt::genCode() {
 
 void ExprStmt::genCode() {
 
+    exp->genCode();
 }
 
 void BreakStmt::genCode() {
@@ -246,10 +321,17 @@ void ContinueStmt::genCode() {
 
 void WhileStmt::genCode() {
 
+    cond->genCode();
+    whileBodyStmt->genCode();
 }
 
 void FuncParam::genCode() {
 
+    for (auto &&i : paramList)
+    {
+        i->genCode();
+    }
+    
 }
 
 /*---------------------------TYPE CHECK----------------------------------------*/
