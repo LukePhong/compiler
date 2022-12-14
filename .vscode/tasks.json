@@ -4,6 +4,14 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "clean",
+            "command": "make",
+            "args": [
+                "clean"
+            ],
+            "type": "shell"
+        },
+        {
             "label": "build-debug",
             "command": "make",
             "args": [
@@ -14,7 +22,7 @@
         { // 依次调试多个任务，若不配置此，则每次launch只会启动一个任务。
             "label": "build-all",
             "dependsOn": [
-                "build-debug"
+                "build-debug",
             ]
         }
     ]

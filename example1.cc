@@ -1,5 +1,27 @@
-void func(){
-    return;
+float aa;
+
+int func(int in){
+
+    int a, b, c;
+    a = 0;
+    b = 1;
+    c = -b;
+    c = !b;
+    switch (in)
+    {
+    case 1:
+        a++;
+        return a;
+    case 2:
+        b = a + c;
+        return b;
+    case 3:
+        return c;
+    default:
+        return a + b + c;
+    }
+
+    return -1;
 }
 
 void func(float a){

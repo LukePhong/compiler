@@ -98,6 +98,9 @@ private:
     int scope;
     Operand *addr;  // The address of the identifier.
     // You can add any field you need here.
+    //q6在全局区添加系统函数声明和全局变量
+    //用于全局变量固定值的获得
+    ConstantSymbolEntry* glbConst = nullptr;
 
 public:
     bool isGlobal() const {return scope == GLOBAL;};
@@ -117,9 +120,11 @@ public:
     std::string toStr();
     int getScope() const {return scope;};
     // You can add any function you need here.
-    // void addDimension(int d);
-    // void setDimension(std::vector<int> d){dimensions = d;};
     bool paramListMarch(std::vector<Type*> typeList);
+    //q6在全局区添加系统函数声明和全局变量
+    void outputGlbId();
+    void outputSysFunc();
+    void setGlbConst(SymbolEntry* se) { glbConst = new ConstantSymbolEntry(*(ConstantSymbolEntry*)se); }
 };
 
 

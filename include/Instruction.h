@@ -22,6 +22,8 @@ public:
     Instruction *getNext();
     Instruction *getPrev();
     virtual void output() const = 0;
+
+    std::vector<Operand*>& getOperands() { return operands; }
 protected:
     unsigned instType;
     unsigned opcode;
@@ -29,7 +31,7 @@ protected:
     Instruction *next;
     BasicBlock *parent;
     std::vector<Operand*> operands;
-    enum {BINARY, COND, UNCOND, RET, LOAD, STORE, CMP, ALLOCA};
+    enum {BINARY, COND, UNCOND, RET, LOAD, STORE, CMP, ALLOCA, CALL};
 };
 
 // meaningless instruction, used as the head node of the instruction list.
@@ -72,8 +74,10 @@ public:
     BinaryInstruction(unsigned opcode, Operand *dst, Operand *src1, Operand *src2, BasicBlock *insert_bb = nullptr);
     ~BinaryInstruction();
     void output() const;
-    enum {SUB, ADD, AND, OR};
+    enum {SUB, ADD, MUL, DIV, MOD, AND, OR};
 };
+
+
 
 class CmpInstruction : public Instruction
 {
@@ -117,6 +121,19 @@ class RetInstruction : public Instruction
 public:
     RetInstruction(Operand *src, BasicBlock *insert_bb = nullptr);
     ~RetInstruction();
+    void output() const;
+    bool isVoid() { return operands.empty(); }
+};
+
+//q5FunctionCall的代码生成
+class FunctionCallInstuction : public Instruction
+{
+private:
+    IdentifierSymbolEntry* func;
+    //需要支持不同长度的参数列表
+public:
+    FunctionCallInstuction(Operand *dst, std::vector<Operand*> params, IdentifierSymbolEntry* func, BasicBlock *insert_bb = nullptr);
+    ~FunctionCallInstuction();
     void output() const;
 };
 

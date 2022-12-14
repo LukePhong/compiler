@@ -17,6 +17,9 @@ struct flags{
     bool isInFunc = false;
     bool isInWhile = false;
 
+    //是否是最后一层条件表达式
+    bool isOuterCond = true;
+
     std::stack<int> cntEle;
     
 } flag;
@@ -26,12 +29,16 @@ Node::Node()
     seq = counter++;
 }
 
-void Node::backPatch(std::vector<Instruction*> &list, BasicBlock*bb)
+void Node::backPatch(std::vector<Instruction*> &list, BasicBlock*bb, bool setTrueBr)
 {
     for(auto &inst:list)
     {
-        if(inst->isCond())
-            dynamic_cast<CondBrInstruction*>(inst)->setTrueBranch(bb);
+        if(inst->isCond()){
+            if(setTrueBr)
+                dynamic_cast<CondBrInstruction*>(inst)->setTrueBranch(bb);
+            else
+                dynamic_cast<CondBrInstruction*>(inst)->setFalseBranch(bb);
+        }
         else if(inst->isUncond())
             dynamic_cast<UncondBrInstruction*>(inst)->setBranch(bb);
     }
@@ -63,6 +70,15 @@ void FunctionDef::genCode()
         params->genCode();
     }
     stmt->genCode();
+    //q4为function加入exit块
+    // 为返回地址分配储存空间，不应该在return处，因为应该一个函数只执行一遍
+    if(retAddr){
+        Instruction *alloca;
+        SymbolEntry *addr_se;
+        addr_se = new TemporarySymbolEntry(((FunctionType*)se->getType())->getReturnType(), SymbolTable::getLabel());
+        alloca = new AllocaInstruction(retAddr, addr_se); 
+        entry->insertFront(alloca);                      
+    }
 
     /**
      * Construct control flow graph. You need do set successors and predecessors for each basic block.
@@ -70,20 +86,30 @@ void FunctionDef::genCode()
     */
 
     std::vector<BasicBlock*> toExit;
+    std::vector<Operand*> isConstVec;
    //q3function连接基本块
    auto bl = func->getBlockList();
    for (auto &&i : bl)
    {
         //去除ret后面还有指令的情况
+        //如果要增加end block就要把return语句也去除
         bool shouldErase = false;
         for(auto j = i->begin(); j != i->end(); j = j->getNext()){
+            if(j->isRet()){
+                shouldErase = true;
+                //返回常量的特殊情况
+                if(j->getOperands()[0]->getSymbolEntry()->isConstant()){
+                    // new StoreInstruction(retAddr, j->getOperands()[0], i);
+                    isConstVec.push_back(j->getOperands()[0]);
+                }else{
+                    isConstVec.push_back(nullptr);
+                }
+            }
             if(shouldErase){
                 i->remove(j);
             }
-            if(j->isRet()){
-                shouldErase = true;
-            }
         }
+        // 增加一个需要和end block连接起来的块
         if(shouldErase){
             toExit.push_back(i);
         }
@@ -104,13 +130,35 @@ void FunctionDef::genCode()
    }
    
     BasicBlock *exit = func->getExit();
-    // set the insert point to the entry basicblock of this function.
     builder->setInsertBB(exit);
    //q4为function加入exit块
+   int cnt = 0;
    for (auto &&i : toExit)
    {
+        if(retAddr){
+            if(!isConstVec[cnt]){
+                //向原先有return的地方添加将结果保存到retAddr的指令
+                new StoreInstruction(retAddr, i->rbegin()->getOperands()[0], i);
+            }else{
+                new StoreInstruction(retAddr, isConstVec[cnt], i);
+            }
+        }
         exit->addPred(i);
         i->addSucc(exit);
+        // 一个基本块结束后面一个不会自动执行
+        new UncondBrInstruction(exit, i);
+        cnt++;
+   }
+
+   if(retAddr){
+        // 向exit block中添加指令
+        auto addr_se = new TemporarySymbolEntry(((FunctionType*)se->getType())->getReturnType(), SymbolTable::getLabel());
+        auto retOp = new Operand(addr_se);
+        new LoadInstruction(retOp, retAddr, exit);
+        new RetInstruction(retOp, exit);
+   }else
+   {
+        new RetInstruction(nullptr, exit);
    }
    
 }
@@ -131,13 +179,56 @@ void BinaryExpr::genCode()
     }
     else if(op == LOGIC_OR)
     {
-        // Todo
+        //q7if语句
+        BasicBlock *falseBB = new BasicBlock(func);  // if the result of lhs is true, jump to the falseBB.
+        expr1->genCode();
+        backPatch(expr1->falseList(), falseBB);
+        builder->setInsertBB(falseBB);              
+        expr2->genCode();
+        false_list = expr2->falseList();
+        true_list = merge(expr1->trueList(), expr2->trueList());
     }
-    else if(op >= LESS && op <= GREATER)
+    else if(op >= LESS && op <= NOT_EQUAL_TO)
     {
-        // Todo
+        //q7if语句
+        bool tempOuter = flag.isOuterCond;
+        if(flag.isOuterCond){
+            flag.isOuterCond = false;
+        }
+        expr1->genCode();
+        expr2->genCode();
+        Operand *src1 = expr1->getOperand();
+        Operand *src2 = expr2->getOperand();
+        int opcode;
+        switch (op)
+        {
+        case LESS:
+            opcode = CmpInstruction::L;
+            break;
+        case LESS_EQUAL:
+            opcode = CmpInstruction::LE;
+            break;
+        case GREATER:
+            opcode = CmpInstruction::G;
+            break;
+        case GREATER_EQUAL:
+            opcode = CmpInstruction::GE;
+            break;
+        case EQUAL_TO:
+            opcode = CmpInstruction::E;
+            break;
+        case NOT_EQUAL_TO:
+            opcode = CmpInstruction::NE;
+            break;
+        }
+        new CmpInstruction(opcode, dst, src1, src2, bb);
+        if(tempOuter){
+            true_list.push_back(new CondBrInstruction(nullptr, nullptr, dst, bb));
+            false_list.push_back(new UncondBrInstruction(nullptr, bb));
+            flag.isOuterCond = true;
+        }
     }
-    else if(op >= ADD && op <= SUB)
+    else if(op >= ADD && op <= REMAINDER)
     {
         expr1->genCode();
         expr2->genCode();
@@ -151,6 +242,15 @@ void BinaryExpr::genCode()
             break;
         case SUB:
             opcode = BinaryInstruction::SUB;
+            break;
+        case PRODUCT:
+            opcode = BinaryInstruction::MUL;
+            break;
+        case DIVISION:
+            opcode = BinaryInstruction::DIV;
+            break;
+        case REMAINDER:
+            opcode = BinaryInstruction::MOD;
             break;
         }
         new BinaryInstruction(opcode, dst, src1, src2, bb);
@@ -180,6 +280,7 @@ void IfStmt::genCode()
 
     cond->genCode();
     backPatch(cond->trueList(), then_bb);
+    backPatch(cond->trueList(), end_bb, false);
     backPatch(cond->falseList(), end_bb);
 
     builder->setInsertBB(then_bb);
@@ -199,7 +300,8 @@ void CompoundStmt::genCode()
 {
     // Todo
     //q2补全代码生成调用链
-    stmt->genCode();
+    if(stmt)
+        stmt->genCode();
 }
 
 void SeqNode::genCode()
@@ -216,6 +318,7 @@ void SeqNode::genCode()
 void DeclStmt::genCode()
 {
     //配合idList
+    int cnt = 0;
     for (const auto id:idList){
         IdentifierSymbolEntry *se = dynamic_cast<IdentifierSymbolEntry *>(id->getSymPtr());
         if(se->isGlobal())
@@ -226,6 +329,10 @@ void DeclStmt::genCode()
             addr_se->setType(new PointerType(se->getType()));
             addr = new Operand(addr_se);
             se->setAddr(addr);
+            //q6在全局区添加系统函数声明和全局变量
+            if(exprList[cnt])
+                se->setGlbConst(exprList[cnt]->getSymbolEntry());
+            builder->getUnit()->getGlbIds().push_back(se);
         }
         else if(se->isLocal())
         {
@@ -241,13 +348,44 @@ void DeclStmt::genCode()
             alloca = new AllocaInstruction(addr, se);                   // allocate space for local id in function stack.
             entry->insertFront(alloca);                                 // allocate instructions should be inserted into the begin of the entry block.
             se->setAddr(addr);                                          // set the addr operand in symbol entry so that we can use it in subsequent code generation.
+
+            auto expr = exprList[cnt];
+            if(expr){
+                BasicBlock *bb = builder->getInsertBB();
+                expr->genCode();
+                Operand *src = expr->getOperand();
+                new StoreInstruction(addr, src, bb);
+            }
         }
+        cnt++;
     }
 }
 
 void ReturnStmt::genCode()
 {
+    BasicBlock *bb = builder->getInsertBB();
     // Todo
+    //q4为function加入exit块
+    //将要返回的语句储存起来，然后再补充load指令、ret指令最后两条指令会被提取出来放到函数的返回块中
+    if(!retValue){
+        //返回值为空，只插入return语句
+        new RetInstruction(nullptr, bb);
+    }else{
+        retValue->genCode();
+        // dst = retValue->getOperand();
+        Operand *src = retValue->getOperand();  //获得计算结果（寄存器，三地址码中的一个）
+        // 不同return语句的addr必须一样，也就是说一个函数只有一个RetInstruction但是这个在这里实现有难度，所以我们放到function那里
+        // 先把return的表达式的计算结果取出来
+        // 不需要，假如是最简单的return a那么这里已经有一条load了
+        // new LoadInstruction(dst, src, bb);
+        // 存到一个新地址中
+        // auto op = new Operand(retValue->getSymbolEntry()); 这个没用这个Operand的label是expr的、不是return的
+        // 那么return究竟需要几个label?
+        // new StoreInstruction(op, src, bb); 
+        // new LoadInstruction(dst, op, bb);
+        // 既然我们又要保证每一个生成的return语句都可用，又想到function里面一起生成end block那么这里可以用最简单的形式
+        new RetInstruction(src, bb);
+    }
 }
 
 void AssignStmt::genCode()
@@ -265,18 +403,64 @@ void AssignStmt::genCode()
 //------------------NEW GEN-CODE--------------------
 void FuncCall::genCode() {
 
+    BasicBlock *bb = builder->getInsertBB();
+    std::vector<Operand*> params;
     //q2补全代码生成调用链
     for (auto &&i : arg)
     {
         i->genCode();
+        params.push_back(i->getOperand());
     }
-    
+    //q5FunctionCall的代码生成
+    new FunctionCallInstuction(dst, params, funcDef, bb);
 }
 
 void UnaryExpr::genCode() {
     
     //q2补全代码生成调用链
-    expr->genCode();
+    // expr->genCode();
+    BasicBlock *bb = builder->getInsertBB();
+    // Function *func = bb->getParent();
+    if (op == SUB)
+    {
+        expr->genCode();
+        Operand *src1;
+        Operand *src2;
+        if(expr->getSymPtr()->getType()->isBool()) {
+            // src1 = new Operand(new ConstantSymbolEntry(TypeSystem::intType, 0));
+            // src2 = typeCast(TypeSystem::intType, expr->getOperand());
+            // int opcode = BinaryInstruction::SUB;
+            // new BinaryInstruction(opcode, dst, src1, src2, bb);
+        }
+        else if(expr->getSymPtr()->getType()->isInt()){
+            src1 = new Operand(new ConstantSymbolEntry(TypeSystem::intType, 0));
+            src2 = expr->getOperand();
+            int opcode = BinaryInstruction::SUB;
+            new BinaryInstruction(opcode, dst, src1, src2, bb);
+        }
+        else if(expr->getSymPtr()->getType()->isFloat()) {
+            // src1 = new Operand(new ConstantSymbolEntry(TypeSystem::floatType, 0));
+            // src2 = expr->getOperand();
+            // int opcode = FBinaryInstruction::SUB;
+            // new FBinaryInstruction(opcode, dst, src1, src2, bb);
+        }
+    }
+    else if(op == LOGIC_NOT)
+    {
+        expr->genCode();
+        Operand *src1 = new Operand(new ConstantSymbolEntry(TypeSystem::intType, 0));
+        Operand *src2 = expr->getOperand();
+        new CmpInstruction(CmpInstruction::E, dst, src1, src2, bb);
+        // if(genBr > 0) {
+        //     // 跳转目标block
+        //     BasicBlock* trueBlock, *falseBlock, *mergeBlock;
+        //     trueBlock = new BasicBlock(func);
+        //     falseBlock = new BasicBlock(func);
+        //     mergeBlock = new BasicBlock(func);
+        //     true_list.push_back(new CondBrInstruction(trueBlock, falseBlock, dst, bb));
+        //     false_list.push_back(new UncondBrInstruction(mergeBlock, falseBlock));
+        // }
+    }
 }
 
 void DimArray::genCode() {
@@ -405,8 +589,8 @@ void IfElseStmt::typeCheck()
 void CompoundStmt::typeCheck()
 {
     // Todo
-
-    stmt->typeCheck();
+    if(stmt)
+        stmt->typeCheck();
 }
 
 void SeqNode::typeCheck()

@@ -2,6 +2,8 @@
 #include <iostream>
 #include <sstream>
 
+extern FILE* yyout;
+
 SymbolEntry::SymbolEntry(Type *type, int kind) 
 {
     this->type = type;
@@ -85,6 +87,47 @@ std::string IdentifierSymbolEntry::toStr()
 {
     return "@" + name;
 }
+
+void IdentifierSymbolEntry::outputGlbId()
+{
+    assert(isGlobal() && (type->isNumber() || type->isArrayType()));
+
+    if(type->isInt()) {
+        if(glbConst){
+            fprintf(yyout, "@%s = global %s %d, align 4 \n", this->name.c_str(), this->type->toStr().c_str(), glbConst->getValueInt());
+        }else{
+            fprintf(yyout, "@%s = global %s 0, align 4 \n", this->name.c_str(), this->type->toStr().c_str());
+        }
+    }
+    else if(type->isFloat()) {
+        if(glbConst){
+            fprintf(yyout, "@%s = global %s %.6e\n",this->name.c_str(), this->type->toStr().c_str(), glbConst->getValueFloat());
+        }else{
+            fprintf(yyout, "@%s = global %s 0.000000e+00 \n",this->name.c_str(), this->type->toStr().c_str());
+        }
+    }
+}
+
+void IdentifierSymbolEntry::outputSysFunc(){
+
+    assert(this->type->isFunc());
+    
+    fprintf(yyout, "declare %s @%s(", 
+        dynamic_cast<FunctionType*>(type)->getRetType()->toStr().c_str(), (const char*)name.c_str());
+    bool first = true;
+    for(auto type : dynamic_cast<FunctionType*>(type)->getParamsType()){
+        if(!type->isVoid()){
+            if(!first){
+                first = false;
+                fprintf(yyout, ", ");
+            }
+            fprintf(yyout,"%s", type->toStr().c_str());
+        }
+    }
+    fprintf(yyout, ")\n");
+
+}
+
 
 std::string TemporarySymbolEntry::toStr()
 {
