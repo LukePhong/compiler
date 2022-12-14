@@ -28,7 +28,8 @@ std::string ConstantSymbolEntry::toStr()
 {
     std::ostringstream buffer;
     // buffer << value_int;
-    if(type->isInt())
+    //q10单目运算作为条件语句
+    if(type->isInt() || type->isBool())
         buffer << getValueInt();
     else
         buffer << getValueFloat();
@@ -38,7 +39,8 @@ std::string ConstantSymbolEntry::toStr()
 //q6浮点数支持
 int ConstantSymbolEntry::getValueInt() const
 {
-    assert(type->isInt());
+    //q10单目运算作为条件语句
+    assert(type->isInt() || type->isBool());
     return value_int;
 }
 float ConstantSymbolEntry::getValueFloat() const

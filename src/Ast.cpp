@@ -19,6 +19,8 @@ struct flags{
 
     //是否是最后一层条件表达式
     bool isOuterCond = true;
+    //运算是否处于条件表达式中
+    bool isUnderCond = false;
 
     std::stack<int> cntEle;
     
@@ -223,8 +225,11 @@ void BinaryExpr::genCode()
         }
         new CmpInstruction(opcode, dst, src1, src2, bb);
         if(tempOuter){
-            true_list.push_back(new CondBrInstruction(nullptr, nullptr, dst, bb));
-            false_list.push_back(new UncondBrInstruction(nullptr, bb));
+            BasicBlock *falseBlock;
+            falseBlock = new BasicBlock(func);
+            true_list.push_back(new CondBrInstruction(nullptr, falseBlock, dst, bb));
+            // without it break for the same reason but found at toBB_f->addPred(i);
+            false_list.push_back(new UncondBrInstruction(nullptr, falseBlock)); // when && break at a CondBrInstruction miss false_branch found at output and none of block end with CondBrInstruction
             flag.isOuterCond = true;
         }
     }
@@ -278,9 +283,11 @@ void IfStmt::genCode()
     then_bb = new BasicBlock(func);
     end_bb = new BasicBlock(func);
 
+    flag.isUnderCond = true;
     cond->genCode();
+    flag.isUnderCond = false;
     backPatch(cond->trueList(), then_bb);
-    backPatch(cond->trueList(), end_bb, false);
+    // backPatch(cond->trueList(), end_bb, false);
     backPatch(cond->falseList(), end_bb);
 
     builder->setInsertBB(then_bb);
@@ -293,7 +300,33 @@ void IfStmt::genCode()
 
 void IfElseStmt::genCode()
 {
-    // Todo
+    //q8ifelse语句
+    Function *func;
+    BasicBlock *then_bb, *else_bb, *end_bb;
+
+    func = builder->getInsertBB()->getParent();
+    then_bb = new BasicBlock(func);
+    else_bb = new BasicBlock(func);
+    end_bb = new BasicBlock(func);
+
+    flag.isUnderCond = true;
+    cond->genCode();
+    flag.isUnderCond = false;
+    backPatch(cond->trueList(), then_bb);
+    // backPatch(cond->trueList(), end_bb, false);
+    backPatch(cond->falseList(), else_bb);
+
+    builder->setInsertBB(then_bb);
+    thenStmt->genCode();
+    then_bb = builder->getInsertBB();
+    new UncondBrInstruction(end_bb, then_bb);
+
+    builder->setInsertBB(else_bb);
+    elseStmt->genCode();
+    else_bb = builder->getInsertBB();
+    new UncondBrInstruction(end_bb, else_bb);
+
+    builder->setInsertBB(end_bb);
 }
 
 void CompoundStmt::genCode()
@@ -417,11 +450,9 @@ void FuncCall::genCode() {
 
 void UnaryExpr::genCode() {
     
-    //q2补全代码生成调用链
-    // expr->genCode();
     BasicBlock *bb = builder->getInsertBB();
-    // Function *func = bb->getParent();
-    if (op == SUB)
+    Function *func = bb->getParent();
+    if (op == SUB && !flag.isUnderCond)
     {
         expr->genCode();
         Operand *src1;
@@ -445,21 +476,36 @@ void UnaryExpr::genCode() {
             // new FBinaryInstruction(opcode, dst, src1, src2, bb);
         }
     }
-    else if(op == LOGIC_NOT)
+    //q10单目运算作为条件语句
+    // 在条件判断的情况下忽略取负值
+    else if(op == LOGIC_NOT || flag.isUnderCond)
     {
+        bool tempOuter = flag.isOuterCond;
+        if(flag.isOuterCond){
+            flag.isOuterCond = false;
+        }
+
         expr->genCode();
-        Operand *src1 = new Operand(new ConstantSymbolEntry(TypeSystem::intType, 0));
-        Operand *src2 = expr->getOperand();
-        new CmpInstruction(CmpInstruction::E, dst, src1, src2, bb);
-        // if(genBr > 0) {
-        //     // 跳转目标block
-        //     BasicBlock* trueBlock, *falseBlock, *mergeBlock;
-        //     trueBlock = new BasicBlock(func);
-        //     falseBlock = new BasicBlock(func);
-        //     mergeBlock = new BasicBlock(func);
-        //     true_list.push_back(new CondBrInstruction(trueBlock, falseBlock, dst, bb));
-        //     false_list.push_back(new UncondBrInstruction(mergeBlock, falseBlock));
+        //TODO：在为负号时不应该执行，但是加上if会导致返回地址出错
+        // if(op == LOGIC_NOT){
+            Operand *src1;
+            if(flag.isUnderCond){
+                src1 = new Operand(new ConstantSymbolEntry(TypeSystem::boolType, 0));
+            }else{
+                src1 = new Operand(new ConstantSymbolEntry(TypeSystem::intType, 0));
+            }
+            Operand *src2 = expr->getOperand();
+            new CmpInstruction(CmpInstruction::E, dst, src1, src2, bb);
         // }
+        
+        if(tempOuter){
+            BasicBlock *falseBlock;
+            falseBlock = new BasicBlock(func);
+            true_list.push_back(new CondBrInstruction(nullptr, falseBlock, dst, bb));
+            // without it break for the same reason but found at toBB_f->addPred(i);
+            false_list.push_back(new UncondBrInstruction(nullptr, falseBlock)); // when && break at a CondBrInstruction miss false_branch found at output and none of block end with CondBrInstruction
+            flag.isOuterCond = true;
+        }
     }
 }
 
@@ -505,8 +551,33 @@ void ContinueStmt::genCode() {
 
 void WhileStmt::genCode() {
 
+    //q9while语句
+    // whileBodyStmt->genCode();
+
+    Function *func;
+    BasicBlock *then_bb, *end_bb, *cond_bb, *bb_prev = builder->getInsertBB();
+
+    func = builder->getInsertBB()->getParent();
+    then_bb = new BasicBlock(func);
+    cond_bb = new BasicBlock(func);
+    end_bb = new BasicBlock(func);
+
+
+    new UncondBrInstruction(cond_bb, bb_prev);
+    builder->setInsertBB(cond_bb);
+    flag.isUnderCond = true;
     cond->genCode();
+    flag.isUnderCond = false;
+    cond_bb = builder->getInsertBB();
+    backPatch(cond->trueList(), then_bb);
+    backPatch(cond->falseList(), end_bb);
+
+    builder->setInsertBB(then_bb);
     whileBodyStmt->genCode();
+    then_bb = builder->getInsertBB();
+    new UncondBrInstruction(cond_bb, then_bb);
+
+    builder->setInsertBB(end_bb);
 }
 
 void FuncParam::genCode() {
