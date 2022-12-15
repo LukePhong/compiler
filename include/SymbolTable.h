@@ -101,6 +101,8 @@ private:
     //q6在全局区添加系统函数声明和全局变量
     //用于全局变量固定值的获得
     ConstantSymbolEntry* glbConst = nullptr;
+    //避免连续声明ID时因为插入临时符号表项导致类型检查时出现 重复定义 错误
+    bool isTemp = false;
 
 public:
     bool isGlobal() const {return scope == GLOBAL;};
@@ -111,6 +113,8 @@ public:
     //错了，我们语法分析时根本不知道这里是几维，因为里面可能是表达式等，无法在此时计算
     //默认是0维
     // std::vector<int> dimensions;
+    bool getIsTemp() { return isTemp; }
+    void setIsTemp(bool b){ isTemp = b; };
 
 public:
     IdentifierSymbolEntry(Type *type, std::string name, int scope);

@@ -33,6 +33,7 @@ protected:
     std::vector<Instruction*> merge(std::vector<Instruction*> &list1, std::vector<Instruction*> &list2);
 
     Operand *typeConvention(Type* target, Operand * toConvert, BasicBlock*bb);
+    void typeConsist(Operand** op1, Operand** op2, BasicBlock*bb, bool wider = false);
 
 public:
     Node();

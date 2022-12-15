@@ -31,7 +31,7 @@ protected:
     Instruction *next;
     BasicBlock *parent;
     std::vector<Operand*> operands;
-    enum {BINARY, COND, UNCOND, RET, LOAD, STORE, CMP, ALLOCA, CALL};
+    enum {BINARY, COND, UNCOND, RET, LOAD, STORE, CMP, ALLOCA, CALL, ZEXT};
 };
 
 // meaningless instruction, used as the head node of the instruction list.
@@ -134,6 +134,15 @@ private:
 public:
     FunctionCallInstuction(Operand *dst, std::vector<Operand*> params, IdentifierSymbolEntry* func, BasicBlock *insert_bb = nullptr);
     ~FunctionCallInstuction();
+    void output() const;
+};
+
+// 符号扩展零填充指令
+class ZextInstruction : public Instruction
+{
+public:
+    ZextInstruction(Operand *dst, Operand *src, BasicBlock *insert_bb = nullptr);
+    ~ZextInstruction();
     void output() const;
 };
 

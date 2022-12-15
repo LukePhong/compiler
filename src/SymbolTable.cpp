@@ -246,7 +246,8 @@ void SymbolTable::installFunc(std::string name, SymbolEntry* entry){
 void SymbolTable::install(std::string name, SymbolEntry* entry)
 {
     //p1同一作用域下重复声明
-    if(symbolTable.find(name) != symbolTable.end()){
+    //避免连续声明ID时因为插入临时符号表项导致类型检查时出现 重复定义 错误
+    if(symbolTable.find(name) != symbolTable.end() && !((IdentifierSymbolEntry*)(symbolTable[name]))->getIsTemp()){
         std::cout<<"错误！相同作用域下变量重复声明！"<<std::endl;
     }
 

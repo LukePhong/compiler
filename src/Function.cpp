@@ -17,10 +17,11 @@ Function::Function(Unit *u, SymbolEntry *s, FunctionDef* def) : funcDefNode(def)
 
 Function::~Function()
 {
-    auto delete_list = block_list;
-    for (auto &i : delete_list)
-        delete i;
-    parent->removeFunc(this);
+    //TODO: 使这个析构能正常运行
+    // auto delete_list = block_list;
+    // for (auto &i : delete_list)
+    //     delete i;
+    // parent->removeFunc(this);
 }
 
 // remove the basicblock bb from its block_list.

@@ -692,7 +692,9 @@ DeclBody
     //没有赋值语句
     DeclBody COMMA ID{
         //q18避免定义时出现未声明变量报错
+        // int a =10, b = a+1;
         auto tempEntry = new IdentifierSymbolEntry(upperType, $3, identifiers->getLevel());
+        tempEntry->setIsTemp(true);
         identifiers->install($3, tempEntry); 
 
         tempDecl.emplace_back(tempDeclArray{identifiers->getLevel(), $3});
@@ -716,6 +718,7 @@ DeclBody
     |DeclBody COMMA ID ASSIGN Exp{
         //q18避免定义时出现未声明变量报错
         auto tempEntry = new IdentifierSymbolEntry(upperType, $3, identifiers->getLevel());
+        tempEntry->setIsTemp(true);
         identifiers->install($3, tempEntry); 
 
         tempDecl.emplace_back(tempDeclArray{identifiers->getLevel(), $3, true, $5});

@@ -13,7 +13,8 @@ IRBuilder* Node::builder = nullptr;
 
 struct flags{
     bool exprShouldCheck = true;
-    Type* shouldReturn;
+    Type* shouldReturn = nullptr;
+    bool haveReturn = false;
     bool isInFunc = false;
     bool isInWhile = false;
 
@@ -49,12 +50,34 @@ void Node::backPatch(std::vector<Instruction*> &list, BasicBlock*bb, bool setTru
 Operand *Node::typeConvention(Type* target, Operand * toConvert, BasicBlock*bb){
     Operand* n;
     if(target->isBool() && toConvert->getType()->isInt()){
+        // std::cout<<"警告！int转换为bool将损失精度！"<<std::endl;
         auto se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
         n = new Operand(se);
         auto src1 = new Operand(new ConstantSymbolEntry(TypeSystem::intType, 0));
         new CmpInstruction(CmpInstruction::NE, n, src1, toConvert, bb);
+    }else if(target->isInt() && toConvert->getType()->isBool()){
+        auto se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
+        n = new Operand(se);
+        new ZextInstruction(n, toConvert, bb);
     }
     return n;
+}
+
+void Node::typeConsist(Operand** op1, Operand** op2, BasicBlock*bb, bool wider){
+    if(!wider){
+        // std::cout<<"警告！int转换为bool将损失精度！"<<std::endl;
+        if((*op1)->getType()->isInt() && (*op2)->getType()->isBool()){
+            *op1 = typeConvention(TypeSystem::boolType, *op1, bb);
+        }else if((*op1)->getType()->isBool() && (*op2)->getType()->isInt()){
+            *op2 = typeConvention(TypeSystem::boolType, *op2, bb);
+        }
+    }else{
+        if((*op1)->getType()->isInt() && (*op2)->getType()->isBool()){
+            *op2 = typeConvention(TypeSystem::intType, *op2, bb);
+        }else if((*op1)->getType()->isBool() && (*op2)->getType()->isInt()){
+            *op1 = typeConvention(TypeSystem::intType, *op1, bb);
+        }
+    }
 }
 
 std::vector<Instruction*> Node::merge(std::vector<Instruction*> &list1, std::vector<Instruction*> &list2)
@@ -234,6 +257,9 @@ void BinaryExpr::genCode()
             opcode = CmpInstruction::NE;
             break;
         }
+
+        typeConsist(&src1, &src2, bb);
+
         new CmpInstruction(opcode, dst, src1, src2, bb);
         if(tempOuter){
             BasicBlock *falseBlock;
@@ -269,7 +295,20 @@ void BinaryExpr::genCode()
             opcode = BinaryInstruction::MOD;
             break;
         }
+
+        typeConsist(&src1, &src2, bb, true);
+
         new BinaryInstruction(opcode, dst, src1, src2, bb);
+
+        // if(flag.isUnderCond){
+        //     BasicBlock *falseBlock;
+        //     falseBlock = new BasicBlock(func);
+        //     // auto ret = typeConvention(TypeSystem::boolType, dst, bb);
+        //     true_list.push_back(new CondBrInstruction(nullptr, falseBlock, dst, bb));
+        //     // without it break for the same reason but found at toBB_f->addPred(i);
+        //     false_list.push_back(new UncondBrInstruction(nullptr, falseBlock)); // when && break at a CondBrInstruction miss false_branch found at output and none of block end with CondBrInstruction
+        //     // flag.isOuterCond = true;
+        // }
     }
 }
 
@@ -281,8 +320,19 @@ void Constant::genCode()
 void Id::genCode()
 {
     BasicBlock *bb = builder->getInsertBB();
+    Function *func = bb->getParent();
     Operand *addr = dynamic_cast<IdentifierSymbolEntry*>(symbolEntry)->getAddr();
     new LoadInstruction(dst, addr, bb);
+
+    // 不是最外层的ID是不能调用的，因为比如a==5是不行的
+    if(flag.isUnderCond && flag.isOuterCond){
+        BasicBlock *falseBlock;
+        falseBlock = new BasicBlock(func);
+        auto ret = typeConvention(TypeSystem::boolType, dst, bb);
+        true_list.push_back(new CondBrInstruction(nullptr, falseBlock, ret, bb));
+        // without it break for the same reason but found at toBB_f->addPred(i);
+        false_list.push_back(new UncondBrInstruction(nullptr, falseBlock)); // when && break at a CondBrInstruction miss false_branch found at output and none of block end with CondBrInstruction
+    }
 }
 
 void IfStmt::genCode()
@@ -300,7 +350,6 @@ void IfStmt::genCode()
     flag.isOuterCond = false;
     flag.isUnderCond = false;
     backPatch(cond->trueList(), then_bb);
-    // backPatch(cond->trueList(), end_bb, false);
     backPatch(cond->falseList(), end_bb);
 
     builder->setInsertBB(then_bb);
@@ -467,6 +516,7 @@ void AssignStmt::genCode()
 void FuncCall::genCode() {
 
     BasicBlock *bb = builder->getInsertBB();
+    Function *func = bb->getParent();
     std::vector<Operand*> params;
     //q2补全代码生成调用链
     for (auto &&i : arg)
@@ -476,6 +526,16 @@ void FuncCall::genCode() {
     }
     //q5FunctionCall的代码生成
     new FunctionCallInstuction(dst, params, funcDef, bb);
+    
+    if(flag.isUnderCond){
+        BasicBlock *falseBlock;
+        falseBlock = new BasicBlock(func);
+        auto ret = typeConvention(TypeSystem::boolType, dst, bb);
+        true_list.push_back(new CondBrInstruction(nullptr, falseBlock, ret, bb));
+        // without it break for the same reason but found at toBB_f->addPred(i);
+        false_list.push_back(new UncondBrInstruction(nullptr, falseBlock)); // when && break at a CondBrInstruction miss false_branch found at output and none of block end with CondBrInstruction
+        // flag.isOuterCond = true;
+    }
 }
 
 void UnaryExpr::genCode() {
@@ -487,19 +547,21 @@ void UnaryExpr::genCode() {
         expr->genCode();
         Operand *src1;
         Operand *src2;
-        if(expr->getSymPtr()->getType()->isBool()) {
-            // src1 = new Operand(new ConstantSymbolEntry(TypeSystem::intType, 0));
-            // src2 = typeCast(TypeSystem::intType, expr->getOperand());
-            // int opcode = BinaryInstruction::SUB;
-            // new BinaryInstruction(opcode, dst, src1, src2, bb);
-        }
-        else if(expr->getSymPtr()->getType()->isInt()){
+        if(expr->getOperand()->getType()->isBool()) {
             src1 = new Operand(new ConstantSymbolEntry(TypeSystem::intType, 0));
             src2 = expr->getOperand();
+            typeConsist(&src1, &src2, bb, true);
             int opcode = BinaryInstruction::SUB;
             new BinaryInstruction(opcode, dst, src1, src2, bb);
         }
-        else if(expr->getSymPtr()->getType()->isFloat()) {
+        else if(expr->getOperand()->getType()->isInt()){
+            src1 = new Operand(new ConstantSymbolEntry(TypeSystem::intType, 0));
+            src2 = expr->getOperand();
+            // typeConsist(&src1, &src2, bb, true);
+            int opcode = BinaryInstruction::SUB;
+            new BinaryInstruction(opcode, dst, src1, src2, bb);
+        }
+        else if(expr->getOperand()->getType()->isFloat()) {
             // src1 = new Operand(new ConstantSymbolEntry(TypeSystem::floatType, 0));
             // src2 = expr->getOperand();
             // int opcode = FBinaryInstruction::SUB;
@@ -527,7 +589,10 @@ void UnaryExpr::genCode() {
             }else{
                 src1 = new Operand(new ConstantSymbolEntry(TypeSystem::intType, 0));
             }
+            //typeConsist(&dst, &src2, bb);
             new CmpInstruction(CmpInstruction::E, dst, src1, src2, bb);
+            // 结果类型必须强制转换为bool
+            dst->getSymbolEntry()->setType(TypeSystem::boolType);
         }else{
             if(src2->getType()->isInt())
                 src2 = typeConvention(TypeSystem::boolType, src2, bb);
@@ -641,7 +706,14 @@ void FunctionDef::typeCheck()
     if(params)
         params->typeCheck();
     flag.shouldReturn = ((FunctionType*)(se->getType()))->getRetType();
+    flag.haveReturn = false;
     stmt->typeCheck();
+    if(!flag.haveReturn){
+        if(!flag.shouldReturn->isVoid()){
+            std::cout<<"错误！返回类型为非空的函数应有return语句！"<<std::endl;
+        }
+        flag.haveReturn = false;
+    }
     flag.isInFunc = false;
 }
 
@@ -761,7 +833,7 @@ void ReturnStmt::typeCheck()
     }else if(!retValue || !retValue->getSymbolEntry()->getType()->isNumber()){
         std::cout<<"错误！函数实际返回类型与定义不符！"<<std::endl;
     }
-
+    flag.haveReturn = true;
     if(retValue)
         retValue->typeCheck();
 }
