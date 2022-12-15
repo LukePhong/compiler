@@ -32,7 +32,7 @@ protected:
     void backPatch(std::vector<Instruction*> &list, BasicBlock*bb, bool setTrueBr = true);
     std::vector<Instruction*> merge(std::vector<Instruction*> &list1, std::vector<Instruction*> &list2);
 
-    // static flag globalFlags;
+    Operand *typeConvention(Type* target, Operand * toConvert, BasicBlock*bb);
 
 public:
     Node();
@@ -256,6 +256,7 @@ public:
     void output(int level);
     void typeCheck();
     void genCode();
+    auto& getIdList() { return idList; }
 };
 //q7支持连续定义/声明
 // class DefStmt : public StmtNode
@@ -332,6 +333,20 @@ public:
     void genCode();
 };
 
+//q10添加参数列表
+class FuncParam : public StmtNode
+{
+private:
+    std::vector<StmtNode*> paramList;
+public:
+    FuncParam(){};
+    void addNext(StmtNode* next);
+    void output(int level);
+    void typeCheck();
+    void genCode();
+    auto& getParamList() { return paramList; }
+};
+
 class FunctionDef : public StmtNode
 {
 private:
@@ -358,18 +373,7 @@ public:
     void output(int level);
     void typeCheck();
     void genCode();
-};
-//q10添加参数列表
-class FuncParam : public StmtNode
-{
-private:
-    std::vector<StmtNode*> paramList;
-public:
-    FuncParam(){};
-    void addNext(StmtNode* next);
-    void output(int level);
-    void typeCheck();
-    void genCode();
+    auto& getParamList() { return ((FuncParam*)params)->getParamList(); }
 };
 
 class Ast

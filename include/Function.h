@@ -8,6 +8,7 @@
 #include <iostream>
 #include "BasicBlock.h"
 #include "SymbolTable.h"
+#include "Ast.h"
 
 class Unit;
 
@@ -24,8 +25,11 @@ private:
     BasicBlock *exit;
     Unit *parent;
 
+    FunctionDef* funcDefNode;
+    std::vector<int> labelParam;
+
 public:
-    Function(Unit *, SymbolEntry *);
+    Function(Unit *, SymbolEntry *,  FunctionDef*);
     ~Function();
     void insertBlock(BasicBlock *bb) { block_list.push_back(bb); };
     BasicBlock *getEntry() { return entry; };
@@ -38,6 +42,7 @@ public:
     reverse_iterator rbegin() { return block_list.rbegin(); };
     reverse_iterator rend() { return block_list.rend(); };
     SymbolEntry *getSymPtr() { return sym_ptr; };
+    void addLabelParam(int l) { labelParam.push_back(l); }
 };
 
 #endif

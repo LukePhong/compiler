@@ -18,7 +18,7 @@ struct flags{
     bool isInWhile = false;
 
     //是否是最后一层条件表达式
-    bool isOuterCond = true;
+    bool isOuterCond = false;
     //运算是否处于条件表达式中
     bool isUnderCond = false;
 
@@ -46,6 +46,17 @@ void Node::backPatch(std::vector<Instruction*> &list, BasicBlock*bb, bool setTru
     }
 }
 
+Operand *Node::typeConvention(Type* target, Operand * toConvert, BasicBlock*bb){
+    Operand* n;
+    if(target->isBool() && toConvert->getType()->isInt()){
+        auto se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
+        n = new Operand(se);
+        auto src1 = new Operand(new ConstantSymbolEntry(TypeSystem::intType, 0));
+        new CmpInstruction(CmpInstruction::NE, n, src1, toConvert, bb);
+    }
+    return n;
+}
+
 std::vector<Instruction*> Node::merge(std::vector<Instruction*> &list1, std::vector<Instruction*> &list2)
 {
     std::vector<Instruction*> res(list1);
@@ -63,7 +74,7 @@ void Ast::genCode(Unit *unit)
 void FunctionDef::genCode()
 {
     Unit *unit = builder->getUnit();
-    Function *func = new Function(unit, se);
+    Function *func = new Function(unit, se, this);
     BasicBlock *entry = func->getEntry();
     // set the insert point to the entry basicblock of this function.
     builder->setInsertBB(entry);
@@ -284,7 +295,9 @@ void IfStmt::genCode()
     end_bb = new BasicBlock(func);
 
     flag.isUnderCond = true;
+    flag.isOuterCond = true;
     cond->genCode();
+    flag.isOuterCond = false;
     flag.isUnderCond = false;
     backPatch(cond->trueList(), then_bb);
     // backPatch(cond->trueList(), end_bb, false);
@@ -310,7 +323,9 @@ void IfElseStmt::genCode()
     end_bb = new BasicBlock(func);
 
     flag.isUnderCond = true;
+    flag.isOuterCond = true;
     cond->genCode();
+    flag.isOuterCond = false;
     flag.isUnderCond = false;
     backPatch(cond->trueList(), then_bb);
     // backPatch(cond->trueList(), end_bb, false);
@@ -350,6 +365,7 @@ void SeqNode::genCode()
 
 void DeclStmt::genCode()
 {
+    BasicBlock *bb = builder->getInsertBB();
     //配合idList
     int cnt = 0;
     for (const auto id:idList){
@@ -367,24 +383,38 @@ void DeclStmt::genCode()
                 se->setGlbConst(exprList[cnt]->getSymbolEntry());
             builder->getUnit()->getGlbIds().push_back(se);
         }
-        else if(se->isLocal())
+        else if(se->isLocal() || se->isParam())
         {
             Function *func = builder->getInsertBB()->getParent();
             BasicBlock *entry = func->getEntry();
-            Instruction *alloca;
             Operand *addr;
+            Instruction *alloca;
             SymbolEntry *addr_se;
             Type *type;
             type = new PointerType(se->getType());
-            addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
-            addr = new Operand(addr_se);
+            if(se->isLocal()){
+                //普通局部变量，只需要一个新的label，分配一个空间即可
+                addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
+                addr = new Operand(addr_se); 
+            }
+            if(se->isParam()){
+                //形参需要一个label用于传参时写入
+                addr_se = new TemporarySymbolEntry(se->getType(), SymbolTable::getLabel());
+                //形参label（变量保存位置）
+                func->addLabelParam(((TemporarySymbolEntry*)addr_se)->getLabel());
+                //另一个label，分配一片空间
+                auto tempPtr = new TemporarySymbolEntry(type, SymbolTable::getLabel());
+                auto srcParam = new Operand(addr_se);
+                addr = new Operand(tempPtr); 
+                //把形参的值存入另一个label指向的空间中
+                new StoreInstruction(addr, srcParam, bb);
+            }
             alloca = new AllocaInstruction(addr, se);                   // allocate space for local id in function stack.
             entry->insertFront(alloca);                                 // allocate instructions should be inserted into the begin of the entry block.
             se->setAddr(addr);                                          // set the addr operand in symbol entry so that we can use it in subsequent code generation.
 
             auto expr = exprList[cnt];
             if(expr){
-                BasicBlock *bb = builder->getInsertBB();
                 expr->genCode();
                 Operand *src = expr->getOperand();
                 new StoreInstruction(addr, src, bb);
@@ -452,7 +482,7 @@ void UnaryExpr::genCode() {
     
     BasicBlock *bb = builder->getInsertBB();
     Function *func = bb->getParent();
-    if (op == SUB && !flag.isUnderCond)
+    if (op == SUB && !flag.isOuterCond)
     {
         expr->genCode();
         Operand *src1;
@@ -478,7 +508,7 @@ void UnaryExpr::genCode() {
     }
     //q10单目运算作为条件语句
     // 在条件判断的情况下忽略取负值
-    else if(op == LOGIC_NOT || flag.isUnderCond)
+    else if(op == LOGIC_NOT || flag.isOuterCond)
     {
         bool tempOuter = flag.isOuterCond;
         if(flag.isOuterCond){
@@ -487,16 +517,24 @@ void UnaryExpr::genCode() {
 
         expr->genCode();
         //TODO：在为负号时不应该执行，但是加上if会导致返回地址出错
-        // if(op == LOGIC_NOT){
-            Operand *src1;
+        Operand *src1;
+        Operand *src2 = expr->getOperand();
+        if(op == LOGIC_NOT){
             if(flag.isUnderCond){
+                if(src2->getType()->isInt())
+                    src2 = typeConvention(TypeSystem::boolType, src2, bb);
                 src1 = new Operand(new ConstantSymbolEntry(TypeSystem::boolType, 0));
             }else{
                 src1 = new Operand(new ConstantSymbolEntry(TypeSystem::intType, 0));
             }
-            Operand *src2 = expr->getOperand();
             new CmpInstruction(CmpInstruction::E, dst, src1, src2, bb);
-        // }
+        }else{
+            if(src2->getType()->isInt())
+                src2 = typeConvention(TypeSystem::boolType, src2, bb);
+            src1 = new Operand(new ConstantSymbolEntry(TypeSystem::boolType, 1));
+            //跟1比较，不会改变原值，以此插入一条无效指令使返回地址匹配
+            new CmpInstruction(CmpInstruction::E, dst, src1, src2, bb);
+        }
         
         if(tempOuter){
             BasicBlock *falseBlock;
@@ -566,7 +604,9 @@ void WhileStmt::genCode() {
     new UncondBrInstruction(cond_bb, bb_prev);
     builder->setInsertBB(cond_bb);
     flag.isUnderCond = true;
+    flag.isOuterCond = true;
     cond->genCode();
+    flag.isOuterCond = false;
     flag.isUnderCond = false;
     cond_bb = builder->getInsertBB();
     backPatch(cond->trueList(), then_bb);
@@ -586,7 +626,6 @@ void FuncParam::genCode() {
     {
         i->genCode();
     }
-    
 }
 
 /*---------------------------TYPE CHECK----------------------------------------*/
