@@ -130,6 +130,29 @@ void BinaryMInstruction::output()
     {
     case BinaryMInstruction::ADD:
         fprintf(yyout, "\tadd ");
+        break;
+    case BinaryMInstruction::SUB:
+        fprintf(yyout, "\tsub ");
+        break;
+    case BinaryMInstruction::MUL:
+        fprintf(yyout, "\tmul ");
+        break;
+    case BinaryMInstruction::DIV:
+        fprintf(yyout, "\tbl\t__aeabi_idiv\n");
+        break;
+    case BinaryMInstruction::MOD:
+        fprintf(yyout, "\tbl\t__aeabi_idivmod\n");
+        break;
+    case BinaryMInstruction::AND:
+        fprintf(yyout, "\tand ");
+        break;
+    case BinaryMInstruction::OR:
+        fprintf(yyout, "\torr ");
+        break;
+    default:
+        break;
+    }
+    if(op != DIV && op != MOD){
         this->PrintCond();
         this->def_list[0]->output();
         fprintf(yyout, ", ");
@@ -137,11 +160,6 @@ void BinaryMInstruction::output()
         fprintf(yyout, ", ");
         this->use_list[1]->output();
         fprintf(yyout, "\n");
-        break;
-    case BinaryMInstruction::SUB:
-        break;
-    default:
-        break;
     }
 }
 
@@ -196,36 +214,97 @@ StoreMInstruction::StoreMInstruction(MachineBlock* p,
     MachineOperand* src1, MachineOperand* src2, MachineOperand* src3, 
     int cond)
 {
-    // TODO
+    //p1补全str指令的输出和生成
+    this->parent = p;
+    this->type = MachineInstruction::STORE;
+    this->op = -1;
+    this->cond = cond;
+    this->use_list.push_back(src1);
+    this->use_list.push_back(src2);
+    if (src3)
+        this->use_list.push_back(src3);
+    src1->setParent(this);
+    src2->setParent(this);
+    if (src3)
+        src3->setParent(this);
 }
 
 void StoreMInstruction::output()
 {
-    // TODO
+    //p1补全str指令的输出和生成
+    fprintf(yyout, "\tstr ");
+    this->use_list[0]->output();
+    fprintf(yyout, ", ");
+
+    // store address
+    if(this->use_list[1]->isReg()||this->use_list[1]->isVReg())
+        fprintf(yyout, "[");
+
+    this->use_list[1]->output();
+    if( this->use_list.size() > 2 )
+    {
+        fprintf(yyout, ", ");
+        this->use_list[2]->output();
+    }
+
+    if(this->use_list[1]->isReg()||this->use_list[1]->isVReg())
+        fprintf(yyout, "]");
+    fprintf(yyout, "\n");
 }
 
 MovMInstruction::MovMInstruction(MachineBlock* p, int op, 
     MachineOperand* dst, MachineOperand* src,
     int cond)
 {
-    // TODO
+    this->parent = p;
+    this->type = MachineInstruction::MOV;
+    this->op = op;
+    this->cond = cond;
+    this->def_list.push_back(dst);
+    this->use_list.push_back(src);
+    dst->setParent(this);
+    src->setParent(this);
 }
 
 void MovMInstruction::output() 
 {
-    // TODO
+    fprintf(yyout, "\tmov ");
+    this->def_list[0]->output();
+    fprintf(yyout, ", ");
+    this->use_list[0]->output();
+    fprintf(yyout, "\n");
 }
 
 BranchMInstruction::BranchMInstruction(MachineBlock* p, int op, 
     MachineOperand* dst, 
     int cond)
 {
-    // TODO
+    this->parent = p;
+    this->type = MachineInstruction::BRANCH;
+    this->op = op;
+    this->cond = cond;
+    this->use_list.push_back(dst);
+    dst->setParent(this);
 }
 
 void BranchMInstruction::output()
 {
-    // TODO
+    switch (op)
+    {
+    case B:
+        fprintf(yyout, "\tb\t");
+        break;
+    case BL:
+        fprintf(yyout, "\tbl\t");
+        break;
+    case BX:
+        fprintf(yyout, "\tbx\t");
+        break;
+    default:
+        break;
+    }
+    use_list[0]->output();
+    fprintf(yyout, "\n");
 }
 
 CmpMInstruction::CmpMInstruction(MachineBlock* p, 
@@ -264,8 +343,10 @@ MachineFunction::MachineFunction(MachineUnit* p, SymbolEntry* sym_ptr)
 void MachineBlock::output()
 {
     fprintf(yyout, ".L%d:\n", this->no);
-    for(auto iter : inst_list)
-        iter->output();
+    for(auto iter : inst_list){
+        if(iter)
+            iter->output();
+    }
 }
 
 void MachineFunction::output()
