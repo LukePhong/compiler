@@ -150,6 +150,7 @@ public:
     FunctionCallInstuction(Operand *dst, std::vector<Operand*> params, IdentifierSymbolEntry* func, BasicBlock *insert_bb = nullptr);
     ~FunctionCallInstuction();
     void output() const;
+    void genMachineCode(AsmBuilder*);
 };
 
 // 符号扩展零填充指令
@@ -159,6 +160,7 @@ public:
     ZextInstruction(Operand *dst, Operand *src, BasicBlock *insert_bb = nullptr);
     ~ZextInstruction();
     void output() const;
+    void genMachineCode(AsmBuilder*);
 };
 
 #endif

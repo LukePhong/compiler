@@ -364,6 +364,10 @@ void FunctionCallInstuction::output() const
     
 }
 
+void FunctionCallInstuction::genMachineCode(AsmBuilder* builder){
+
+}
+
 ZextInstruction::ZextInstruction(Operand *dst, Operand *src, BasicBlock *insert_bb) : Instruction(ZEXT, insert_bb)
 {
     operands.push_back(dst);
@@ -389,6 +393,9 @@ void ZextInstruction::output() const
     fprintf(yyout, "  %s = zext %s %s to %s\n", dst.c_str(), src_type.c_str(), src.c_str(), dst_type.c_str());
 }
 
+void ZextInstruction::genMachineCode(AsmBuilder* builder){
+
+}
 
 //==================MachineCode==========================//
 MachineOperand* Instruction::genMachineOperand(Operand* ope)
@@ -396,7 +403,8 @@ MachineOperand* Instruction::genMachineOperand(Operand* ope)
     auto se = ope->getEntry();
     MachineOperand* mope = nullptr;
     if(se->isConstant())
-        mope = new MachineOperand(MachineOperand::IMM, dynamic_cast<ConstantSymbolEntry*>(se)->getValue());
+        mope = new MachineOperand(MachineOperand::IMM, 
+            ((ConstantSymbolEntry*)se)->isInt() ? dynamic_cast<ConstantSymbolEntry*>(se)->getValueInt() : dynamic_cast<ConstantSymbolEntry*>(se)->getValueFloat());
     else if(se->isTemporary())
         mope = new MachineOperand(MachineOperand::VREG, dynamic_cast<TemporarySymbolEntry*>(se)->getLabel());
     else if(se->isVariable())

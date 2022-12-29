@@ -152,10 +152,10 @@ int main(int argc, char *argv[])
     ast.genCode(&unit);
     if(dump_ir)
         unit.output();
-    unit.genMachineCode(&mUnit);
-    LinearScan linearScan(&mUnit);
-    linearScan.allocateRegisters();
-    if(dump_asm)
-        mUnit.output();
+    // unit.genMachineCode(&mUnit);
+    // LinearScan linearScan(&mUnit);
+    // linearScan.allocateRegisters();
+    // if(dump_asm)
+    //     mUnit.output();
     return 0;
 }
