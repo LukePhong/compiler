@@ -55,6 +55,7 @@ Instruction *Instruction::getPrev()
 BinaryInstruction::BinaryInstruction(unsigned opcode, Operand *dst, Operand *src1, Operand *src2, BasicBlock *insert_bb) : Instruction(BINARY, insert_bb)
 {
     this->opcode = opcode;
+    //pushback顺序不能改变
     operands.push_back(dst);
     operands.push_back(src1);
     operands.push_back(src2);
@@ -86,6 +87,15 @@ void BinaryInstruction::output() const
         break;
     case SUB:
         op = "sub";
+        break;
+    case MUL:
+        op = "mul";
+        break;
+    case DIV:
+        op = "sdiv";
+        break;
+    case MOD:
+        op = "srem";
         break;
     default:
         break;
@@ -312,6 +322,75 @@ void StoreInstruction::output() const
     fprintf(yyout, "  store %s %s, %s %s, align 4\n", src_type.c_str(), src.c_str(), dst_type.c_str(), dst.c_str());
 }
 
+//q5FunctionCall的代码生成
+FunctionCallInstuction::FunctionCallInstuction(Operand *dst, std::vector<Operand*> params, IdentifierSymbolEntry* func, BasicBlock *insert_bb) : Instruction(CALL, insert_bb)
+{
+    this->func = func;
+    operands = params;
+    operands.insert(operands.begin(), dst);
+    dst->setDef(this);
+    for (auto &&i : params)
+    {
+        i->addUse(this);
+    }
+}
+
+FunctionCallInstuction::~FunctionCallInstuction()
+{
+    operands[0]->setDef(nullptr);
+    if(operands[0]->usersNum() == 0)
+        delete operands[0];
+    for (size_t i = 1; i < operands.size(); i++)
+    {
+        operands[i]->removeUse(this);
+    }
+}
+
+void FunctionCallInstuction::output() const
+{
+    std::string dst = operands[0]->toStr();
+    std::string dst_type = operands[0]->getType()->toStr();
+    if(!operands[0]->getSymbolEntry()->getType()->isVoid())
+        fprintf(yyout, "  %s = call %s %s(", dst.c_str(), dst_type.c_str(), func->toStr().c_str());
+    else
+        fprintf(yyout, "  call %s %s(", dst_type.c_str(), func->toStr().c_str());
+    for (size_t i = 1; i < operands.size(); i++)
+    {
+        fprintf(yyout, "%s %s", operands[i]->getType()->toStr().c_str(), operands[i]->toStr().c_str());
+        if(i != operands.size() - 1)
+            fprintf(yyout, ",");
+    }
+    fprintf(yyout, ")\n");
+    
+}
+
+ZextInstruction::ZextInstruction(Operand *dst, Operand *src, BasicBlock *insert_bb) : Instruction(ZEXT, insert_bb)
+{
+    operands.push_back(dst);
+    operands.push_back(src);
+    dst->setDef(this);
+    src->addUse(this);
+}
+
+ZextInstruction::~ZextInstruction()
+{
+    operands[0]->setDef(nullptr);
+    if(operands[0]->usersNum() == 0)
+        delete operands[0];
+    operands[1]->removeUse(this);
+}
+
+void ZextInstruction::output() const
+{
+    std::string dst = operands[0]->toStr();
+    std::string src = operands[1]->toStr();
+    std::string dst_type = operands[0]->getType()->toStr();
+    std::string src_type = operands[1]->getType()->toStr();
+    fprintf(yyout, "  %s = zext %s %s to %s\n", dst.c_str(), src_type.c_str(), src.c_str(), dst_type.c_str());
+}
+
+
+//==================MachineCode==========================//
 MachineOperand* Instruction::genMachineOperand(Operand* ope)
 {
     auto se = ope->getEntry();

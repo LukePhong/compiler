@@ -30,6 +30,7 @@ public:
     std::string toStr() const;
     SymbolEntry * getEntry() { return se; };
     Instruction* getDef() { return def; };
+    auto getSymbolEntry() { return se; }
 };
 
 #endif

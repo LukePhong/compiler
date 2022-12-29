@@ -19,7 +19,20 @@ void BasicBlock::insertBack(Instruction *inst)
 // insert the instruction dst before src.
 void BasicBlock::insertBefore(Instruction *dst, Instruction *src)
 {
-    // Todo
+    //q1Instruction的链表插入
+    // auto temp = head;
+    // while(temp != src){
+    //     temp = temp->getNext();
+    //     if(temp == head){
+    //         std::cout<<"没有找到src"<<std::endl;
+    //         assert(0);
+    //     }
+    // }
+    auto temp = src->getPrev();
+    temp->setNext(dst);
+    src->setPrev(dst);
+    dst->setPrev(temp);
+    dst->setNext(src);
 
     dst->setParent(this);
 }

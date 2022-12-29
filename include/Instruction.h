@@ -18,6 +18,7 @@ public:
     bool isUncond() const {return instType == UNCOND;};
     bool isCond() const {return instType == COND;};
     bool isAlloc() const {return instType == ALLOCA;};
+    bool isRet() const {return instType == RET;};
     void setParent(BasicBlock *);
     void setNext(Instruction *);
     void setPrev(Instruction *);
@@ -30,6 +31,7 @@ public:
     MachineOperand* genMachineImm(int val);
     MachineOperand* genMachineLabel(int block_no);
     virtual void genMachineCode(AsmBuilder*) = 0;
+    std::vector<Operand*>& getOperands() { return operands; }
 protected:
     unsigned instType;
     unsigned opcode;
@@ -37,7 +39,7 @@ protected:
     Instruction *next;
     BasicBlock *parent;
     std::vector<Operand*> operands;
-    enum {BINARY, COND, UNCOND, RET, LOAD, STORE, CMP, ALLOCA};
+    enum {BINARY, COND, UNCOND, RET, LOAD, STORE, CMP, ALLOCA, CALL, ZEXT};
 };
 
 // meaningless instruction, used as the head node of the instruction list.
@@ -85,7 +87,7 @@ public:
     ~BinaryInstruction();
     void output() const;
     void genMachineCode(AsmBuilder*);
-    enum {SUB, ADD, AND, OR};
+    enum {SUB, ADD, MUL, DIV, MOD, AND, OR};
 };
 
 class CmpInstruction : public Instruction
@@ -135,6 +137,28 @@ public:
     ~RetInstruction();
     void output() const;
     void genMachineCode(AsmBuilder*);
+    bool isVoid() { return operands.empty(); }
+};
+
+//q5FunctionCall的代码生成
+class FunctionCallInstuction : public Instruction
+{
+private:
+    IdentifierSymbolEntry* func;
+    //需要支持不同长度的参数列表
+public:
+    FunctionCallInstuction(Operand *dst, std::vector<Operand*> params, IdentifierSymbolEntry* func, BasicBlock *insert_bb = nullptr);
+    ~FunctionCallInstuction();
+    void output() const;
+};
+
+// 符号扩展零填充指令
+class ZextInstruction : public Instruction
+{
+public:
+    ZextInstruction(Operand *dst, Operand *src, BasicBlock *insert_bb = nullptr);
+    ~ZextInstruction();
+    void output() const;
 };
 
 #endif

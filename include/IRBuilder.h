@@ -8,7 +8,7 @@ class BasicBlock;
 class IRBuilder
 {
 private:
-    Unit *unit;
+    Unit *unit;     //编译单元，是我们中间代码的顶层模块，包含我们中间代码生成时创建的函数。
     BasicBlock *insertBB;   // The current basicblock that instructions should be inserted into.
 
 public:

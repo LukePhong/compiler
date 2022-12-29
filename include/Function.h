@@ -9,6 +9,7 @@
 #include "BasicBlock.h"
 #include "SymbolTable.h"
 #include "AsmBuilder.h"
+#include "Ast.h"
 
 class Unit;
 
@@ -21,13 +22,19 @@ private:
     std::vector<BasicBlock *> block_list;
     SymbolEntry *sym_ptr;
     BasicBlock *entry;
+    //q4为function加入exit块
+    BasicBlock *exit;
     Unit *parent;
 
+    FunctionDef* funcDefNode;
+    std::vector<int> labelParam;
+
 public:
-    Function(Unit *, SymbolEntry *);
+    Function(Unit *, SymbolEntry *,  FunctionDef*);
     ~Function();
     void insertBlock(BasicBlock *bb) { block_list.push_back(bb); };
     BasicBlock *getEntry() { return entry; };
+    BasicBlock *getExit() { return exit; };
     void remove(BasicBlock *bb);
     void output() const;
     std::vector<BasicBlock *> &getBlockList(){return block_list;};
@@ -37,6 +44,7 @@ public:
     reverse_iterator rend() { return block_list.rend(); };
     SymbolEntry *getSymPtr() { return sym_ptr; };
     void genMachineCode(AsmBuilder*);
+    void addLabelParam(int l) { labelParam.push_back(l); }
 };
 
 #endif

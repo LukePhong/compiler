@@ -34,6 +34,7 @@ public:
     void removePred(BasicBlock *);
     int getNo() { return no; };
     Function *getParent() { return parent; };
+    //服务于迭代器
     Instruction* begin() { return head->getNext();};
     Instruction* end() { return head;};
     Instruction* rbegin() { return head->getPrev();};

@@ -12,6 +12,9 @@ class Unit
 
 private:
     std::vector<Function *> func_list;
+    //q6在全局区添加系统函数声明和全局变量
+    std::vector<IdentifierSymbolEntry*> glbIds;
+    std::vector<IdentifierSymbolEntry*> sysFuncs;
 public:
     Unit() = default;
     ~Unit() ;
@@ -22,6 +25,10 @@ public:
     iterator end() { return func_list.end(); };
     reverse_iterator rbegin() { return func_list.rbegin(); };
     reverse_iterator rend() { return func_list.rend(); };
+
+    std::vector<IdentifierSymbolEntry*>& getGlbIds() { return glbIds; }
+    std::vector<IdentifierSymbolEntry*>& getSysFuncs() { return sysFuncs; }
+
     void genMachineCode(MachineUnit* munit);
 };
 
