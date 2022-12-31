@@ -129,7 +129,15 @@ public:
     //q6在全局区添加系统函数声明和全局变量
     void outputGlbId();
     void outputSysFunc();
-    void setGlbConst(SymbolEntry* se) { glbConst = new ConstantSymbolEntry(*(ConstantSymbolEntry*)se); }
+    void setGlbConst(SymbolEntry* se) { 
+        //q11浮点数支持
+        // glbConst = new ConstantSymbolEntry(*(ConstantSymbolEntry*)se); 
+        auto cst = (ConstantSymbolEntry*)se;
+        if(cst->isInt())
+            glbConst = new ConstantSymbolEntry(type, cst->getValueInt());
+        else
+            glbConst = new ConstantSymbolEntry(type, cst->getValueFloat());
+    }
 };
 
 

@@ -151,7 +151,7 @@ void CmpInstruction::output() const
     s3 = operands[2]->toStr();
     type = operands[1]->getType()->toStr();
 
-    if(operands[0]->getType()->isFloat()){
+    if(operands[1]->getType()->isFloat()){
         switch (opcode)
         {
         case E:

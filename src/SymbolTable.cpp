@@ -106,7 +106,10 @@ void IdentifierSymbolEntry::outputGlbId()
     }
     else if(type->isFloat()) {
         if(glbConst){
-            fprintf(yyout, "@%s = global %s %.6e\n",this->name.c_str(), this->type->toStr().c_str(), glbConst->getValueFloat());
+            std::stringstream ss;
+            auto value = (double)glbConst->getValueFloat();
+            ss << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(16) << *reinterpret_cast<uint64_t*>(&value);
+            fprintf(yyout, "@%s = global %s %s\n",this->name.c_str(), this->type->toStr().c_str(), ss.str().c_str());
         }else{
             fprintf(yyout, "@%s = global %s 0.000000e+00 \n",this->name.c_str(), this->type->toStr().c_str());
         }
