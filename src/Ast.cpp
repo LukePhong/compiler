@@ -49,6 +49,10 @@ void Node::backPatch(std::vector<Instruction*> &list, BasicBlock*bb, bool setTru
 
 Operand *Node::typeConvention(Type* target, Operand * toConvert, BasicBlock*bb){
     Operand* n;
+    if(target->getKind() == toConvert->getType()->getKind()){
+        return toConvert;
+    }
+
     if(target->isBool() && toConvert->getType()->isInt()){
         // std::cout<<"警告！int转换为bool将损失精度！"<<std::endl;
         auto se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
@@ -59,6 +63,14 @@ Operand *Node::typeConvention(Type* target, Operand * toConvert, BasicBlock*bb){
         auto se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
         n = new Operand(se);
         new ZextInstruction(n, toConvert, bb);
+    }else if(target->isFloat() && toConvert->getType()->isInt()){
+        auto se = new TemporarySymbolEntry(TypeSystem::floatType, SymbolTable::getLabel());
+        n = new Operand(se);
+        new IntFloatCastInstruction(IntFloatCastInstruction::I2F, n, toConvert, bb);
+    }else if(target->isInt() && toConvert->getType()->isFloat()){
+        auto se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
+        n = new Operand(se);
+        new IntFloatCastInstruction(IntFloatCastInstruction::F2I, n, toConvert, bb);
     }
     return n;
 }
@@ -68,14 +80,28 @@ void Node::typeConsist(Operand** op1, Operand** op2, BasicBlock*bb, bool wider){
         // std::cout<<"警告！int转换为bool将损失精度！"<<std::endl;
         if((*op1)->getType()->isInt() && (*op2)->getType()->isBool()){
             *op1 = typeConvention(TypeSystem::boolType, *op1, bb);
-        }else if((*op1)->getType()->isBool() && (*op2)->getType()->isInt()){
+            return;
+        }
+        if((*op1)->getType()->isBool() && (*op2)->getType()->isInt()){
             *op2 = typeConvention(TypeSystem::boolType, *op2, bb);
+            return;
         }
     }else{
         if((*op1)->getType()->isInt() && (*op2)->getType()->isBool()){
             *op2 = typeConvention(TypeSystem::intType, *op2, bb);
-        }else if((*op1)->getType()->isBool() && (*op2)->getType()->isInt()){
+            return;
+        }
+        if((*op1)->getType()->isBool() && (*op2)->getType()->isInt()){
             *op1 = typeConvention(TypeSystem::intType, *op1, bb);
+            return;
+        }
+        if((*op1)->getType()->isFloat() && !(*op2)->getType()->isFloat()){
+            *op2 = typeConvention(TypeSystem::floatType, *op2, bb);
+            return;
+        }
+        if((*op2)->getType()->isFloat() && !(*op1)->getType()->isFloat()){
+            *op1 = typeConvention(TypeSystem::floatType, *op1, bb);
+            return;
         }
     }
 }
@@ -102,6 +128,8 @@ void FunctionDef::genCode()
     // set the insert point to the entry basicblock of this function.
     builder->setInsertBB(entry);
 
+    flag.shouldReturn = ((FunctionType*)(se->getType()))->getRetType();
+
     if(params!=nullptr){
         params->genCode();
     }
@@ -115,7 +143,6 @@ void FunctionDef::genCode()
         alloca = new AllocaInstruction(retAddr, addr_se); 
         entry->insertFront(alloca);                      
     }
-
     /**
      * Construct control flow graph. You need do set successors and predecessors for each basic block.
      * Todo
@@ -258,7 +285,7 @@ void BinaryExpr::genCode()
             break;
         }
 
-        typeConsist(&src1, &src2, bb);
+        typeConsist(&src1, &src2, bb, true);
 
         new CmpInstruction(opcode, dst, src1, src2, bb);
         if(tempOuter){
@@ -486,6 +513,8 @@ void ReturnStmt::genCode()
         retValue->genCode();
         // dst = retValue->getOperand();
         Operand *src = retValue->getOperand();  //获得计算结果（寄存器，三地址码中的一个）
+        assert(flag.shouldReturn != nullptr);
+        src = typeConvention(flag.shouldReturn, src, bb);
         // 不同return语句的addr必须一样，也就是说一个函数只有一个RetInstruction但是这个在这里实现有难度，所以我们放到function那里
         // 先把return的表达式的计算结果取出来
         // 不需要，假如是最简单的return a那么这里已经有一条load了

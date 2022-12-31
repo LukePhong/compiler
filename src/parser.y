@@ -66,7 +66,7 @@
 
 %nterm <stmttype> Stmts Stmt AssignStmt BlockStmt IfStmt ReturnStmt DeclStmt FuncDef BreakStmt ContinueStmt 
                     WhileStmt DimArray ArrayDefBlock ArrayDef FuncParam ExprStmt
-%nterm <exprtype> Exp AddExp Cond LOrExp PrimaryExp LVal RelExp LAndExp UnaryExp MulExp FuncCall ArrayIndex
+%nterm <exprtype> Exp AddExp Cond LOrExp PrimaryExp LVal RelExp LAndExp UnaryExp MulExp FuncCall ArrayIndex EqlExp
 %nterm <type> Type
 
 %precedence THEN
@@ -286,9 +286,9 @@ LOrExp
 //逻辑与运算
 LAndExp
     :
-    RelExp {$$ = $1;}
+    EqlExp {$$ = $1;}
     |
-    LAndExp LOGIC_AND RelExp
+    LAndExp LOGIC_AND EqlExp
     {
         SymbolEntry *se;
         //if($1->getSymbolEntry()->getType()->isInt())
@@ -296,6 +296,31 @@ LAndExp
         //else
         se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
         $$ = new BinaryExpr(se, BinaryExpr::LOGIC_AND, $1, $3);
+    }
+    ;
+//q12修改比较运算符优先级
+EqlExp
+    :
+    RelExp {$$ = $1;}
+    |
+    EqlExp EQUAL_TO RelExp
+    {
+        SymbolEntry *se;
+        //if($1->getSymbolEntry()->getType()->isInt())
+        //    se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
+        //else
+        se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
+        $$ = new BinaryExpr(se, BinaryExpr::EQUAL_TO, $1, $3);
+    }
+    |
+    EqlExp NOT_EQUAL_TO RelExp
+    {
+        SymbolEntry *se;
+        //if($1->getSymbolEntry()->getType()->isInt())
+        //    se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
+        //else
+        se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
+        $$ = new BinaryExpr(se, BinaryExpr::NOT_EQUAL_TO, $1, $3);
     }
     ;
 //关系运算
@@ -341,26 +366,6 @@ RelExp
         //else
         se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
         $$ = new BinaryExpr(se, BinaryExpr::GREATER_EQUAL, $1, $3);
-    }
-    |
-    RelExp EQUAL_TO AddExp
-    {
-        SymbolEntry *se;
-        //if($1->getSymbolEntry()->getType()->isInt())
-        //    se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        //else
-        se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
-        $$ = new BinaryExpr(se, BinaryExpr::EQUAL_TO, $1, $3);
-    }
-    |
-    RelExp NOT_EQUAL_TO AddExp
-    {
-        SymbolEntry *se;
-        //if($1->getSymbolEntry()->getType()->isInt())
-        //    se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
-        //else
-        se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
-        $$ = new BinaryExpr(se, BinaryExpr::NOT_EQUAL_TO, $1, $3);
     }
     ;
 //if括号内

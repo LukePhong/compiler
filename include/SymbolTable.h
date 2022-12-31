@@ -7,6 +7,7 @@
 class Type;
 class Operand;
 #include <cassert>
+#include <iomanip>
 
 #include "Type.h"
 

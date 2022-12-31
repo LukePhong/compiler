@@ -31,8 +31,11 @@ std::string ConstantSymbolEntry::toStr()
     //q10单目运算作为条件语句
     if(type->isInt() || type->isBool())
         buffer << getValueInt();
-    else
-        buffer << getValueFloat();
+    else{
+        // buffer << getValueFloat();
+        auto value = (double)getValueFloat();
+        buffer << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(16) << *reinterpret_cast<uint64_t*>(&value);
+    }
     return buffer.str();
 }
 

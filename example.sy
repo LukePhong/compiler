@@ -1,9 +1,6 @@
-//test mul
+//test global var define
+const int a = 10;
+
 int main(){
-    int a, b;
-    a = 10;
-    b = 5;
-    if(a>b)
-        return 0;
-    return 1 % 2;
+    return a;
 }

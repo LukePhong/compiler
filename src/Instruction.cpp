@@ -80,25 +80,46 @@ void BinaryInstruction::output() const
     s2 = operands[1]->toStr();
     s3 = operands[2]->toStr();
     type = operands[0]->getType()->toStr();
-    switch (opcode)
-    {
-    case ADD:
-        op = "add";
-        break;
-    case SUB:
-        op = "sub";
-        break;
-    case MUL:
-        op = "mul";
-        break;
-    case DIV:
-        op = "sdiv";
-        break;
-    case MOD:
-        op = "srem";
-        break;
-    default:
-        break;
+
+    if(operands[0]->getType()->isFloat()){
+        switch (opcode)
+        {
+        case ADD:
+            op = "fadd";
+            break;
+        case SUB:
+            op = "fsub";
+            break;
+        case MUL:
+            op = "fmul";
+            break;
+        case DIV:
+            op = "fdiv";
+            break;
+        default:
+            break;
+        }
+    }else{
+        switch (opcode)
+        {
+        case ADD:
+            op = "add";
+            break;
+        case SUB:
+            op = "sub";
+            break;
+        case MUL:
+            op = "mul";
+            break;
+        case DIV:
+            op = "sdiv";
+            break;
+        case MOD:
+            op = "srem";
+            break;
+        default:
+            break;
+        }
     }
     fprintf(yyout, "  %s = %s %s %s, %s\n", s1.c_str(), op.c_str(), type.c_str(), s2.c_str(), s3.c_str());
 }
@@ -129,32 +150,61 @@ void CmpInstruction::output() const
     s2 = operands[1]->toStr();
     s3 = operands[2]->toStr();
     type = operands[1]->getType()->toStr();
-    switch (opcode)
-    {
-    case E:
-        op = "eq";
-        break;
-    case NE:
-        op = "ne";
-        break;
-    case L:
-        op = "slt";
-        break;
-    case LE:
-        op = "sle";
-        break;
-    case G:
-        op = "sgt";
-        break;
-    case GE:
-        op = "sge";
-        break;
-    default:
-        op = "";
-        break;
-    }
 
-    fprintf(yyout, "  %s = icmp %s %s %s, %s\n", s1.c_str(), op.c_str(), type.c_str(), s2.c_str(), s3.c_str());
+    if(operands[0]->getType()->isFloat()){
+        switch (opcode)
+        {
+        case E:
+            op = "oeq";
+            break;
+        case NE:
+            op = "one";
+            break;
+        case L:
+            op = "olt";
+            break;
+        case LE:
+            op = "ole";
+            break;
+        case G:
+            op = "ogt";
+            break;
+        case GE:
+            op = "oge";
+            break;
+        default:
+            op = "";
+            break;
+        }
+        fprintf(yyout, "  %s = fcmp %s %s %s, %s\n", s1.c_str(), op.c_str(), type.c_str(), s2.c_str(), s3.c_str());
+    }else{
+        switch (opcode)
+        {
+        case E:
+            op = "eq";
+            break;
+        case NE:
+            op = "ne";
+            break;
+        case L:
+            op = "slt";
+            break;
+        case LE:
+            op = "sle";
+            break;
+        case G:
+            op = "sgt";
+            break;
+        case GE:
+            op = "sge";
+            break;
+        default:
+            op = "";
+            break;
+        }
+        fprintf(yyout, "  %s = icmp %s %s %s, %s\n", s1.c_str(), op.c_str(), type.c_str(), s2.c_str(), s3.c_str());
+    }
+    
 }
 
 UncondBrInstruction::UncondBrInstruction(BasicBlock *to, BasicBlock *insert_bb) : Instruction(UNCOND, insert_bb)
@@ -397,17 +447,60 @@ void ZextInstruction::genMachineCode(AsmBuilder* builder){
 
 }
 
+IntFloatCastInstruction::IntFloatCastInstruction(unsigned opcode, Operand *dst, Operand *src, BasicBlock *insert_bb) : Instruction(CAST, insert_bb)
+{
+    this->opcode = opcode;
+    operands.push_back(dst);
+    operands.push_back(src);
+    dst->setDef(this);
+    src->addUse(this);
+}
+
+IntFloatCastInstruction::~IntFloatCastInstruction()
+{
+    operands[0]->setDef(nullptr);
+    if(operands[0]->usersNum() == 0)
+        delete operands[0];
+    operands[1]->removeUse(this);
+}
+
+void IntFloatCastInstruction::output() const
+{
+    std::string dst = operands[0]->toStr();
+    std::string src = operands[1]->toStr();
+    std::string dst_type = operands[0]->getType()->toStr();
+    std::string src_type = operands[1]->getType()->toStr();
+    std::string castType;
+    switch(opcode) {
+        case I2F:
+            castType = "sitofp";
+            break;
+        case F2I:
+            castType = "fptosi";
+            break;
+        default:
+            castType = "";
+            break;
+    }
+    fprintf(yyout, "  %s = %s %s %s to %s\n", dst.c_str(), castType.c_str(), src_type.c_str(), src.c_str(), dst_type.c_str());
+}
+
+void IntFloatCastInstruction::genMachineCode(AsmBuilder*){
+
+}
+
 //==================MachineCode==========================//
 MachineOperand* Instruction::genMachineOperand(Operand* ope)
 {
+    //TODO: 全局常量可能需要调整
     auto se = ope->getEntry();
     MachineOperand* mope = nullptr;
-    if(se->isConstant())
+    if(se->isConstant() && se->getType()->isNumber())
         mope = new MachineOperand(MachineOperand::IMM, 
             ((ConstantSymbolEntry*)se)->isInt() ? dynamic_cast<ConstantSymbolEntry*>(se)->getValueInt() : dynamic_cast<ConstantSymbolEntry*>(se)->getValueFloat());
     else if(se->isTemporary())
         mope = new MachineOperand(MachineOperand::VREG, dynamic_cast<TemporarySymbolEntry*>(se)->getLabel());
-    else if(se->isVariable())
+    else if(se->isVariable() || (se->isConstant() && !se->getType()->isNumber()))
     {
         auto id_se = dynamic_cast<IdentifierSymbolEntry*>(se);
         if(id_se->isGlobal())

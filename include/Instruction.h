@@ -39,7 +39,7 @@ protected:
     Instruction *next;
     BasicBlock *parent;
     std::vector<Operand*> operands;
-    enum {BINARY, COND, UNCOND, RET, LOAD, STORE, CMP, ALLOCA, CALL, ZEXT};
+    enum {BINARY, COND, UNCOND, RET, LOAD, STORE, CMP, ALLOCA, CALL, ZEXT, CAST};
 };
 
 // meaningless instruction, used as the head node of the instruction list.
@@ -161,6 +161,17 @@ public:
     ~ZextInstruction();
     void output() const;
     void genMachineCode(AsmBuilder*);
+};
+
+//q11浮点数支持
+class IntFloatCastInstruction : public Instruction
+{
+public:
+    IntFloatCastInstruction(unsigned opcode, Operand *dst, Operand *src, BasicBlock *insert_bb = nullptr);
+    ~IntFloatCastInstruction();
+    void output() const;
+    void genMachineCode(AsmBuilder*);
+    enum {I2F, F2I};
 };
 
 #endif
