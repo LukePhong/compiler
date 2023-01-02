@@ -598,21 +598,17 @@ DeclStmt
                     }
                 }
             }
-
             if (i.dim){
                 if($1->isInt()){
-                    // std::cout<<"hello1"<<std::endl;
                     auto t = new ArrayIntType(*(((DimArray*)i.dim)->getDimList()), $1);
                     se = new IdentifierSymbolEntry(t, i.name, i.level);
                 }
                 else{
-                    // std::cout<<"hello2"<<std::endl;
                     auto t = new ArrayFloatType(*(((DimArray*)i.dim)->getDimList()), $1);
                     se = new IdentifierSymbolEntry(t, i.name, i.level);
                 }
             }
             else{
-                // std::cout<<"hello3"<<std::endl;
                 se = new IdentifierSymbolEntry($1, i.name, i.level);
             }
             identifiers->install(i.name, se);            

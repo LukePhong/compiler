@@ -41,21 +41,20 @@ std::string ConstantSymbolEntry::toStr()
 
 std::string ConstantSymbolEntry::genStr(Type* t)
 {
-    std::ostringstream buffer;
     if(t->isInt()){
         if(type->isInt() || type->isBool()){
-            buffer << getValueInt();
+            return std::to_string(getValueInt());
         }else if(type->isFloat()){
-            buffer << (int)getValueFloat();
+            return std::to_string((int)getValueFloat());
         }
     }else if(t->isFloat()){
         if(type->isInt() || type->isBool()){
-            buffer << (float)getValueInt();
+            return std::to_string((float)getValueInt());
         }else if(type->isFloat()){
-            buffer << getValueFloat();
+            return std::to_string(getValueFloat());
         }
     }
-    return buffer.str();
+    return std::string("");
 }
 
 //q6浮点数支持
