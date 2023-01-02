@@ -4,7 +4,7 @@
 #include <string>
 #include <map>
 
-class Type;
+// class Type;
 class Operand;
 #include <cassert>
 #include <iomanip>
@@ -101,9 +101,11 @@ private:
     // You can add any field you need here.
     //q6在全局区添加系统函数声明和全局变量
     //用于全局变量固定值的获得
-    ConstantSymbolEntry* glbConst = nullptr;
+    ConstantSymbolEntry* glbValue = nullptr;
     //避免连续声明ID时因为插入临时符号表项导致类型检查时出现 重复定义 错误
     bool isTemp = false;
+    //q13添加数组IR支持
+    std::string arrayDefStr = "";
 
 public:
     bool isGlobal() const {return scope == GLOBAL;};
@@ -134,10 +136,12 @@ public:
         // glbConst = new ConstantSymbolEntry(*(ConstantSymbolEntry*)se); 
         auto cst = (ConstantSymbolEntry*)se;
         if(cst->isInt())
-            glbConst = new ConstantSymbolEntry(type, cst->getValueInt());
+            glbValue = new ConstantSymbolEntry(type, cst->getValueInt());
         else
-            glbConst = new ConstantSymbolEntry(type, cst->getValueFloat());
+            glbValue = new ConstantSymbolEntry(type, cst->getValueFloat());
     }
+    void setArrDefStr(std::string s) { arrayDefStr = s;}
+    std::string getArrDefStr() { return arrayDefStr; }
 };
 
 

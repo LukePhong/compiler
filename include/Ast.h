@@ -16,9 +16,6 @@ class IRBuilder;
 // class SymbolEntry;
 #include <SymbolTable.h>
 
-// struct flags{
-//     bool exprShouldCheck = true;
-// } flag;
 
 class Node
 {
@@ -151,6 +148,8 @@ public:
     void output(int level);
     void typeCheck();
     void genCode();
+    bool isAllDefined(int& cnt);
+    void getArrayDefStr(int idx);
 };
 
 //q14数组取值

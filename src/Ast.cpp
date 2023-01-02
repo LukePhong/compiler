@@ -24,6 +24,11 @@ struct flags{
     bool isUnderCond = false;
 
     std::stack<int> cntEle;
+
+    std::stringstream arrayDefString;
+    IdentifierSymbolEntry* arrayId;
+    // ArrayDef* arrDefRoot;
+    std::vector<ArrayDef*>::iterator arrDefIter;
     
 } flag;
 
@@ -464,8 +469,15 @@ void DeclStmt::genCode()
             addr = new Operand(addr_se);
             se->setAddr(addr);
             //q6在全局区添加系统函数声明和全局变量
-            if(exprList[cnt])
+            if(exprList[cnt]){
+                exprList[cnt]->genCode();
                 se->setGlbConst(exprList[cnt]->getSymbolEntry());
+            }else if(defArrList[cnt]){
+                ((ArrayType*)idList[cnt]->getSymbolEntry()->getType())->countEleNum();
+                ((ArrayType*)idList[cnt]->getSymbolEntry()->getType())->genDimTypeStrings();
+                flag.arrayId = ((IdentifierSymbolEntry*)idList[cnt]->getSymbolEntry());
+                defArrList[cnt]->genCode();
+            }
             builder->getUnit()->getGlbIds().push_back(se);
         }
         else if(se->isLocal() || se->isParam())
@@ -670,13 +682,103 @@ void DimArray::genCode() {
 }
 
 void ArrayDef::genCode() {
+    int cnt = 0;
+    if(isAllDefined(cnt)){
+        int idx = 0;
+        flag.arrDefIter = arrDefList.begin();
+        getArrayDefStr(idx);
+        flag.arrayId->setArrDefStr(flag.arrayDefString.str());
+        flag.arrayDefString.clear();    // 清空流
+        flag.arrayDefString.str("");
+    }else{
+        if(expr)
+            expr->genCode();
 
-    for (auto &&i : arrDefList)
-    {
-        i->genCode();
+        for (auto &&i : arrDefList)
+        {
+            i->genCode();
+        }
     }
     
 }
+
+bool ArrayDef::isAllDefined(int& cnt){
+    if(cnt == ((ArrayType*)flag.arrayId->getType())->getCntEleNum())
+        return true;
+    if(expr)
+        return false;
+    bool temp = false;
+    for (auto &&i : arrDefList)
+    {
+        if(i->expr)
+            cnt++;
+        temp = temp ? true : i->isAllDefined(cnt);
+    }
+    return temp;
+}
+
+void ArrayDef::getArrayDefStr(int idx){
+    auto dims = ((ArrayType*)flag.arrayId->getType())->getDimList();
+    auto p = ((ArrayType*)flag.arrayId->getType());
+    if(expr){
+        flag.arrayDefString<<expr->getSymbolEntry()->toStr();
+        return;
+    }
+    for (size_t i = 0; i < ((ConstantSymbolEntry*)dims[idx]->getSymbolEntry())->getValueInt(); i++)
+    {
+        if(!arrDefList.empty()){
+            flag.arrayDefString<<p->getDimTypeStrings()[idx];
+            arrDefList[i]->getArrayDefStr(idx + 1);
+        }
+        // else
+        //     flag.arrayDefString<<expr->getSymbolEntry()->toStr();
+    }
+    
+}
+
+// void ArrayDef::getArrayDefStr(int& idx){
+//     auto p = ((ArrayType*)flag.arrayId->getType());
+//     // if(idx == 0 && !expr && arrDefList.size() == 1){
+//     //     arrDefList[0]->getArrayDefStr(idx);
+//     //     return;
+//     // }
+//     if(idx == p->getDim())  
+//         return;
+//     size_t cnt = 0;
+//     // if(idx >= 0)
+//         flag.arrayDefString<<"[";
+//     if(arrDefList[0]->expr && arrDefList[0]->arrDefList.empty()){
+//         for (auto &&i : arrDefList)
+//         {
+//             flag.arrayDefString<<p->getDimTypeStrings()[idx]<<" "<<((ConstantSymbolEntry*)arrDefList[cnt]->expr->getSymbolEntry())->toStr();
+//             cnt++;
+//             if(idx >= 0 && cnt < arrDefList.size())
+//                 flag.arrayDefString<<",";
+//         }
+//         flag.arrayDefString<<"]";
+//         return;
+//     }
+//     for (auto &&i : arrDefList)
+//     {
+//         // if(idx >= 0){
+//             // if(expr){
+//             //     flag.arrayDefString<<p->getDimTypeStrings()[idx]<<" "<<((ConstantSymbolEntry*)expr->getSymbolEntry())->toStr();
+//             //     continue;
+//             // }else{
+//                 flag.arrayDefString<<p->getDimTypeStrings()[idx];
+//             // }
+//         // }
+//         idx++;
+//         i->getArrayDefStr(idx);
+//         idx--;
+//         cnt++;
+//         if(idx >= 0 && cnt < arrDefList.size())
+//             flag.arrayDefString<<",";
+//     }
+//     // if(idx >= 0)
+//         flag.arrayDefString<<"]";
+//     return;
+// }
 
 void ArrayIndex::genCode() {
 

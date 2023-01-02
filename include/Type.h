@@ -56,6 +56,8 @@ class ArrayType : public Type{
 private:
     std::vector<ExprNode*> dimList;
     Type *elementType;
+    int cntEleNum;
+    std::vector<std::string> dimTypeStrArray;
 public:
     //如果这里没有eleType的话，使用arrayIntType定义的数组再访问时如果访问到eleType将会是null
     ArrayType(Type::typeKind typeKind, Type *elementType) : Type(typeKind), elementType(elementType){};
@@ -63,6 +65,12 @@ public:
     virtual std::string toStr() = 0;
     size_t getDim() { return dimList.size(); };
     Type* getElementType() { return elementType; };
+    auto getDimList() { return dimList; }
+    std::string getDimTypeStr(bool isInt);
+    void countEleNum();
+    int getCntEleNum() { return cntEleNum; }
+    void genDimTypeStrings();
+    auto getDimTypeStrings() { return dimTypeStrArray; }
 };
 
 class ArrayIntType : public ArrayType

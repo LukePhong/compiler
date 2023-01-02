@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
     identifiers->installFunc("getch", id1);
     unit.getSysFuncs().push_back(id1);
 
-    auto funcType2 = new FunctionType(TypeSystem::intType, tempParaType);
+    auto funcType2 = new FunctionType(TypeSystem::floatType, tempParaType);
     auto id2 = new IdentifierSymbolEntry(funcType2, "getfloat", 0);
     identifiers->installFunc("getfloat", id2);
     unit.getSysFuncs().push_back(id2);

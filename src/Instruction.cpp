@@ -318,7 +318,10 @@ void AllocaInstruction::output() const
     std::string dst, type;
     dst = operands[0]->toStr();
     type = se->getType()->toStr();
-    fprintf(yyout, "  %s = alloca %s, align 4\n", dst.c_str(), type.c_str());
+    if(se->getType()->isNumber())
+        fprintf(yyout, "  %s = alloca %s, align 4\n", dst.c_str(), type.c_str());
+    else
+        fprintf(yyout, "  %s = alloca %s, align 16\n", dst.c_str(), type.c_str());
 }
 
 LoadInstruction::LoadInstruction(Operand *dst, Operand *src_addr, BasicBlock *insert_bb) : Instruction(LOAD, insert_bb)

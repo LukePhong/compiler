@@ -97,21 +97,32 @@ void IdentifierSymbolEntry::outputGlbId()
 {
     assert(isGlobal() && (type->isNumber() || type->isArrayType()));
 
+    auto t = this->type->toStr();
+    if(isConstant()){
+        t = "constant " + t;
+    }else{
+        t = "global " + t;
+    }
+
     if(type->isInt()) {
-        if(glbConst){
-            fprintf(yyout, "@%s = global %s %d, align 4 \n", this->name.c_str(), this->type->toStr().c_str(), glbConst->getValueInt());
+        if(glbValue){
+            if(glbValue->getType()->isNumber())
+                fprintf(yyout, "@%s = %s %d, align 4 \n", this->name.c_str(), t.c_str(), glbValue->getValueInt());
+            else{
+                ;
+            }
         }else{
-            fprintf(yyout, "@%s = global %s 0, align 4 \n", this->name.c_str(), this->type->toStr().c_str());
+            fprintf(yyout, "@%s = %s 0, align 4 \n", this->name.c_str(), t.c_str());
         }
     }
     else if(type->isFloat()) {
-        if(glbConst){
+        if(glbValue){
             std::stringstream ss;
-            auto value = (double)glbConst->getValueFloat();
+            auto value = (double)glbValue->getValueFloat();
             ss << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(16) << *reinterpret_cast<uint64_t*>(&value);
-            fprintf(yyout, "@%s = global %s %s\n",this->name.c_str(), this->type->toStr().c_str(), ss.str().c_str());
+            fprintf(yyout, "@%s = %s %s, align 4 \n",this->name.c_str(), t.c_str(), ss.str().c_str());
         }else{
-            fprintf(yyout, "@%s = global %s 0.000000e+00 \n",this->name.c_str(), this->type->toStr().c_str());
+            fprintf(yyout, "@%s = %s 0.000000e+00, align 4 \n",this->name.c_str(), t.c_str());
         }
     }
 }
