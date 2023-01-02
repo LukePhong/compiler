@@ -27,16 +27,11 @@ struct flags{
 
     std::stringstream arrayDefString;
     IdentifierSymbolEntry* arrayId;
-    // std::vector<ArrayDef*>::iterator arrDefIter;
-    // struct stkItm{
-    //     std::vector<ArrayDef*>::iterator it;
-    //     std::vector<ArrayDef*> vec;
-    // };
     std::stack<std::vector<ArrayDef*>::iterator> arrDefIterStk;
     
 } flag;
 
-
+//q13添加数组IR支持
 /*
     method
     -1 若栈顶为空，返回nullptr
@@ -535,6 +530,7 @@ void DeclStmt::genCode()
                 se->setGlbConst(exprList[cnt]->getSymbolEntry());
                 builder->getUnit()->getGlbIds().push_back(se);
             }else if(defArrList[cnt]){
+                //q13添加数组IR支持
                 ((ArrayType*)idList[cnt]->getSymbolEntry()->getType())->countEleNum();
                 ((ArrayType*)idList[cnt]->getSymbolEntry()->getType())->genDimTypeStrings();
                 flag.arrayId = ((IdentifierSymbolEntry*)idList[cnt]->getSymbolEntry());
@@ -845,7 +841,22 @@ bool ArrayDef::isAllDefined(int& cnt){
 
 void ArrayIndex::genCode() {
 
+    BasicBlock *bb = builder->getInsertBB();
+    Function *func = bb->getParent();
+
     dim->genCode();
+
+    Operand *addr = dynamic_cast<IdentifierSymbolEntry*>(arrDef)->getAddr();
+    new ArrLoadInstruction(dst, addr, (IdentifierSymbolEntry*)arrDef, *dim->getDimList(), bb);
+
+    if(flag.isUnderCond && flag.isOuterCond){
+        BasicBlock *falseBlock;
+        falseBlock = new BasicBlock(func);
+        auto ret = typeConvention(TypeSystem::boolType, dst, bb);
+        true_list.push_back(new CondBrInstruction(nullptr, falseBlock, ret, bb));
+        // without it break for the same reason but found at toBB_f->addPred(i);
+        false_list.push_back(new UncondBrInstruction(nullptr, falseBlock)); // when && break at a CondBrInstruction miss false_branch found at output and none of block end with CondBrInstruction
+    }
 }
 
 void EmptyStmt::genCode() {

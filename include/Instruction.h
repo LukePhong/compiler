@@ -71,6 +71,16 @@ public:
     void genMachineCode(AsmBuilder*);
 };
 
+class ArrLoadInstruction : public LoadInstruction
+{
+public:
+    ArrLoadInstruction(Operand *dst, Operand *src_addr, IdentifierSymbolEntry* arrDef, std::vector<ExprNode*>& dimList, BasicBlock *insert_bb = nullptr);
+    void output() const;
+private:
+    IdentifierSymbolEntry* arrDef;
+    std::vector<ExprNode*>& dimList;
+};
+
 class StoreInstruction : public Instruction
 {
 public:

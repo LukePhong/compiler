@@ -351,6 +351,39 @@ void LoadInstruction::output() const
     fprintf(yyout, "  %s = load %s, %s %s, align 4\n", dst.c_str(), dst_type.c_str(), src_type.c_str(), src.c_str());
 }
 
+//q13添加数组IR支持
+ArrLoadInstruction::ArrLoadInstruction(Operand *dst, Operand *src_addr, IdentifierSymbolEntry* arrDef, std::vector<ExprNode*>& dimList, BasicBlock *insert_bb) 
+    : LoadInstruction(dst, src_addr, insert_bb), arrDef(arrDef), dimList(dimList) 
+{
+    for (auto &&i : dimList)
+    {
+        i->getOperand()->addUse(this);
+    }
+}
+
+void ArrLoadInstruction::output() const
+{
+    std::string dst = operands[0]->toStr();
+    std::string src = operands[1]->toStr();
+    std::string src_type;
+    std::string dst_type;
+    dst_type = operands[0]->getType()->toStr();
+    src_type = operands[1]->getType()->toStr();
+    //%7 = load i32, i32* getelementptr inbounds ([1 x i32], [1 x i32]* @aaa, i64 0, i64 0), align 4
+    Operand* p_src = operands[1];
+    fprintf(yyout, "  %s = load %s, %s* getelementptr inbounds (", dst.c_str(), dst_type.c_str(), dst_type.c_str());
+    fprintf(yyout, "%s, %s %s, ", arrDef->getType()->toStr().c_str(), src_type.c_str(), arrDef->toStr().c_str());
+    int cnt = 0;
+    for (auto &&i : dimList)
+    {
+        fprintf(yyout, "i64 %s", i->getSymPtr()->toStr().c_str());
+        cnt++;
+        if(cnt < dimList.size() - 1)
+            fprintf(yyout, ",");
+    }
+    fprintf(yyout, "), align 4\n");
+}
+
 StoreInstruction::StoreInstruction(Operand *dst_addr, Operand *src, BasicBlock *insert_bb) : Instruction(STORE, insert_bb)
 {
     operands.push_back(dst_addr);
