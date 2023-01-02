@@ -27,10 +27,71 @@ struct flags{
 
     std::stringstream arrayDefString;
     IdentifierSymbolEntry* arrayId;
-    // ArrayDef* arrDefRoot;
-    std::vector<ArrayDef*>::iterator arrDefIter;
+    // std::vector<ArrayDef*>::iterator arrDefIter;
+    // struct stkItm{
+    //     std::vector<ArrayDef*>::iterator it;
+    //     std::vector<ArrayDef*> vec;
+    // };
+    std::stack<std::vector<ArrayDef*>::iterator> arrDefIterStk;
     
 } flag;
+
+
+/*
+    method
+    -1 若栈顶为空，返回nullptr
+    0 栈顶是end则把自己弹栈，把栈顶+1，返回第-1步
+    1 本身是不是指向一个有expr的block？如果是的话返回他，迭代器自增
+        如果不是的话就压入下一层的头迭代器，返回第0步
+*/
+ExprNode* getNextExprInArrDef(){
+    while(1){
+        if(flag.arrDefIterStk.empty())
+            return nullptr;
+        auto& top = flag.arrDefIterStk.top();
+        // if(top.it == top.vec.end()){
+        if(!(*top.base())){
+            flag.arrDefIterStk.pop();
+            if(!flag.arrDefIterStk.empty()){
+                flag.arrDefIterStk.top()++;
+            }
+            continue;
+        }
+        auto e = (*top.base())->getLeaf();
+        if(e){
+            top++;
+            return e;
+        }else{
+            auto& list = (*top.base())->getDefList();
+            flag.arrDefIterStk.push(list.begin());
+        }
+    }
+}
+
+/*
+    method
+    对于一棵满树，循环部分会按照它的理想层次结构遍历这棵树，
+    即使arrDefList所构成的树在内存里未必是这个样子，但是getNextExprInArrDef()都能
+    准确的返回内存中树的下一个没有被打印过的值，于是我们能够打印出理想的满树对应的字符串
+*/
+void getArrayDefStr(int idx){
+    auto dims = ((ArrayType*)flag.arrayId->getType())->getDimList();
+    auto p = ((ArrayType*)flag.arrayId->getType());
+    if(idx == dims.size()){
+        flag.arrayDefString<<((ConstantSymbolEntry*)getNextExprInArrDef()->getSymbolEntry())->genStr(p->getElementType());
+        return;
+    }
+    flag.arrayDefString<<"[";
+    int dimNum = ((ConstantSymbolEntry*)dims[idx]->getSymbolEntry())->getValueInt();
+    for (size_t i = 0; i < dimNum; i++)
+    {
+        flag.arrayDefString<<p->getDimTypeStrings()[idx]<<" ";
+        getArrayDefStr(idx + 1);
+        if(i != dimNum - 1)
+            flag.arrayDefString<<",";
+    }
+    flag.arrayDefString<<"]";
+}
 
 Node::Node()
 {
@@ -472,13 +533,16 @@ void DeclStmt::genCode()
             if(exprList[cnt]){
                 exprList[cnt]->genCode();
                 se->setGlbConst(exprList[cnt]->getSymbolEntry());
+                builder->getUnit()->getGlbIds().push_back(se);
             }else if(defArrList[cnt]){
                 ((ArrayType*)idList[cnt]->getSymbolEntry()->getType())->countEleNum();
                 ((ArrayType*)idList[cnt]->getSymbolEntry()->getType())->genDimTypeStrings();
                 flag.arrayId = ((IdentifierSymbolEntry*)idList[cnt]->getSymbolEntry());
                 defArrList[cnt]->genCode();
+                builder->getUnit()->getGlbIds().push_back(flag.arrayId);
+                flag.arrayId = nullptr;
             }
-            builder->getUnit()->getGlbIds().push_back(se);
+            // builder->getUnit()->getGlbIds().push_back(se);
         }
         else if(se->isLocal() || se->isParam())
         {
@@ -684,16 +748,15 @@ void DimArray::genCode() {
 void ArrayDef::genCode() {
     int cnt = 0;
     if(isAllDefined(cnt)){
-        int idx = 0;
-        flag.arrDefIter = arrDefList.begin();
-        getArrayDefStr(idx);
+        flag.arrDefIterStk.push(arrDefList.begin());
+        getArrayDefStr(0);
         flag.arrayId->setArrDefStr(flag.arrayDefString.str());
         flag.arrayDefString.clear();    // 清空流
         flag.arrayDefString.str("");
+        std::stack<std::vector<ArrayDef*>::iterator>().swap(flag.arrDefIterStk);
     }else{
         if(expr)
             expr->genCode();
-
         for (auto &&i : arrDefList)
         {
             i->genCode();
@@ -717,24 +780,24 @@ bool ArrayDef::isAllDefined(int& cnt){
     return temp;
 }
 
-void ArrayDef::getArrayDefStr(int idx){
-    auto dims = ((ArrayType*)flag.arrayId->getType())->getDimList();
-    auto p = ((ArrayType*)flag.arrayId->getType());
-    if(expr){
-        flag.arrayDefString<<expr->getSymbolEntry()->toStr();
-        return;
-    }
-    for (size_t i = 0; i < ((ConstantSymbolEntry*)dims[idx]->getSymbolEntry())->getValueInt(); i++)
-    {
-        if(!arrDefList.empty()){
-            flag.arrayDefString<<p->getDimTypeStrings()[idx];
-            arrDefList[i]->getArrayDefStr(idx + 1);
-        }
-        // else
-        //     flag.arrayDefString<<expr->getSymbolEntry()->toStr();
-    }
+// void ArrayDef::getArrayDefStr(int idx){
+//     auto dims = ((ArrayType*)flag.arrayId->getType())->getDimList();
+//     auto p = ((ArrayType*)flag.arrayId->getType());
+//     if(expr){
+//         flag.arrayDefString<<expr->getSymbolEntry()->toStr();
+//         return;
+//     }
+//     for (size_t i = 0; i < ((ConstantSymbolEntry*)dims[idx]->getSymbolEntry())->getValueInt(); i++)
+//     {
+//         if(!arrDefList.empty()){
+//             flag.arrayDefString<<p->getDimTypeStrings()[idx];
+//             arrDefList[i]->getArrayDefStr(idx + 1);
+//         }
+//         // else
+//         //     flag.arrayDefString<<expr->getSymbolEntry()->toStr();
+//     }
     
-}
+// }
 
 // void ArrayDef::getArrayDefStr(int& idx){
 //     auto p = ((ArrayType*)flag.arrayId->getType());

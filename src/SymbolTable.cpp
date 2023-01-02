@@ -39,6 +39,25 @@ std::string ConstantSymbolEntry::toStr()
     return buffer.str();
 }
 
+std::string ConstantSymbolEntry::genStr(Type* t)
+{
+    std::ostringstream buffer;
+    if(t->isInt()){
+        if(type->isInt() || type->isBool()){
+            buffer << getValueInt();
+        }else if(type->isFloat()){
+            buffer << (int)getValueFloat();
+        }
+    }else if(t->isFloat()){
+        if(type->isInt() || type->isBool()){
+            buffer << (float)getValueInt();
+        }else if(type->isFloat()){
+            buffer << getValueFloat();
+        }
+    }
+    return buffer.str();
+}
+
 //q6浮点数支持
 int ConstantSymbolEntry::getValueInt() const
 {
@@ -106,24 +125,30 @@ void IdentifierSymbolEntry::outputGlbId()
 
     if(type->isInt()) {
         if(glbValue){
-            if(glbValue->getType()->isNumber())
+            // if(glbValue->getType()->isNumber())
                 fprintf(yyout, "@%s = %s %d, align 4 \n", this->name.c_str(), t.c_str(), glbValue->getValueInt());
-            else{
-                ;
-            }
+            // else{
+            //     fprintf(yyout, "@%s = %s %s, align 4 \n", this->name.c_str(), t.c_str(), arrayDefStr);
+            // }
         }else{
             fprintf(yyout, "@%s = %s 0, align 4 \n", this->name.c_str(), t.c_str());
         }
     }
     else if(type->isFloat()) {
         if(glbValue){
-            std::stringstream ss;
-            auto value = (double)glbValue->getValueFloat();
-            ss << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(16) << *reinterpret_cast<uint64_t*>(&value);
-            fprintf(yyout, "@%s = %s %s, align 4 \n",this->name.c_str(), t.c_str(), ss.str().c_str());
+            // if(glbValue->getType()->isNumber()){
+                std::stringstream ss;
+                auto value = (double)glbValue->getValueFloat();
+                ss << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(16) << *reinterpret_cast<uint64_t*>(&value);
+                fprintf(yyout, "@%s = %s %s, align 4 \n",this->name.c_str(), t.c_str(), ss.str().c_str());
+            // }else{
+            //     fprintf(yyout, "@%s = %s %s, align 4 \n",this->name.c_str(), t.c_str(), arrayDefStr);
+            // }
         }else{
             fprintf(yyout, "@%s = %s 0.000000e+00, align 4 \n",this->name.c_str(), t.c_str());
         }
+    }else if(type->isArrayType()){
+        fprintf(yyout, "@%s = %s %s, align 16 \n", this->name.c_str(), t.c_str(), arrayDefStr.c_str());
     }
 }
 

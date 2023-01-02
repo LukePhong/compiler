@@ -145,11 +145,12 @@ public:
     void addDef(ArrayDef* def);
     void setLeaf(ExprNode* e){ expr = e;};
     ExprNode* getLeaf() { return expr; };
+    std::vector<ArrayDef*>& getDefList() { return arrDefList; }
     void output(int level);
     void typeCheck();
     void genCode();
     bool isAllDefined(int& cnt);
-    void getArrayDefStr(int idx);
+    // void getArrayDefStr(int idx);
 };
 
 //q14数组取值

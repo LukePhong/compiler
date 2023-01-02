@@ -65,6 +65,7 @@ public:
     float getValueFloat() const;
     std::string toStr();
     // You can add any function you need here.
+    std::string genStr(Type* t);
 };
 
 
