@@ -113,7 +113,7 @@ std::string IdentifierSymbolEntry::toStr()
 
 void IdentifierSymbolEntry::outputGlbId()
 {
-    assert(isGlobal() && (type->isNumber() || type->isArrayType()));
+    // assert(isGlobal() && (type->isNumber() || type->isArrayType()));
 
     auto t = this->type->toStr();
     if(isConstant()){

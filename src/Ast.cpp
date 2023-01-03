@@ -28,6 +28,7 @@ struct flags{
     std::stringstream arrayDefString;
     IdentifierSymbolEntry* arrayId;
     std::stack<std::vector<ArrayDef*>::iterator> arrDefIterStk;
+    std::vector<ExprNode*>::iterator dimListIter;
     bool isOuterArrDecl = false;
     
 } flag;
@@ -66,15 +67,21 @@ ExprNode* getNextExprInArrDef(){
 
 /*
     method
+    idx是第几维，从0开始
     对于一棵满树，循环部分会按照它的理想层次结构遍历这棵树，
     即使arrDefList所构成的树在内存里未必是这个样子，但是getNextExprInArrDef()都能
     准确的返回内存中树的下一个没有被打印过的值，于是我们能够打印出理想的满树对应的字符串
 */
-void getArrayDefStr(int idx){
+void getArrayDefStr(int idx, bool checkTop = false){
     auto dims = ((ArrayType*)flag.arrayId->getType())->getDimList();
     auto p = ((ArrayType*)flag.arrayId->getType());
     if(idx == dims.size()){
-        flag.arrayDefString<<((ConstantSymbolEntry*)getNextExprInArrDef()->getSymbolEntry())->genStr(p->getElementType());
+        auto& top = flag.arrDefIterStk.top();
+        if(checkTop && !(*top.base())){   //这样就可以补零了
+            flag.arrayDefString<<"0";
+        }else{
+            flag.arrayDefString<<((ConstantSymbolEntry*)getNextExprInArrDef()->getSymbolEntry())->genStr(p->getElementType());
+        }
         return;
     }
     flag.arrayDefString<<"[";
@@ -82,7 +89,7 @@ void getArrayDefStr(int idx){
     for (size_t i = 0; i < dimNum; i++)
     {
         flag.arrayDefString<<p->getDimTypeStrings()[idx]<<" ";
-        getArrayDefStr(idx + 1);
+        getArrayDefStr(idx + 1, i != 0);
         if(i != dimNum - 1)
             flag.arrayDefString<<",";
     }
@@ -534,6 +541,7 @@ void DeclStmt::genCode()
                 ((ArrayType*)idList[cnt]->getSymbolEntry()->getType())->countEleNum();
                 ((ArrayType*)idList[cnt]->getSymbolEntry()->getType())->genDimTypeStrings();
                 flag.arrayId = ((IdentifierSymbolEntry*)idList[cnt]->getSymbolEntry());
+                flag.dimListIter = ((ArrayType*)flag.arrayId->getType())->getDimList().begin();
                 flag.isOuterArrDecl = true;
                 defArrList[cnt]->genCode();
                 builder->getUnit()->getGlbIds().push_back(flag.arrayId);
@@ -586,9 +594,9 @@ void DeclStmt::genCode()
                 new StoreInstruction(addr, src, bb);
             }else if(defArrList[cnt]){
                 flag.arrayId = ((IdentifierSymbolEntry*)idList[cnt]->getSymbolEntry());
+                flag.dimListIter = ((ArrayType*)flag.arrayId->getType())->getDimList().begin();
                 flag.isOuterArrDecl = true;
                 defArrList[cnt]->genCode();
-                // builder->getUnit()->getGlbIds().push_back(flag.arrayId);
                 flag.arrayId = nullptr;
             }
         }
@@ -791,6 +799,7 @@ void ArrayDef::genCode() {
             flag.arrayDefString.clear();    // 清空流
             flag.arrayDefString.str("");
             std::stack<std::vector<ArrayDef*>::iterator>().swap(flag.arrDefIterStk);
+            builder->getUnit()->getGlbIds().push_back(flag.arrayId);
         }else if(arrDefList.empty()){
             auto tmpEntry = new TemporarySymbolEntry(new PointerType(TypeSystem::shortIntType), SymbolTable::getLabel());
             auto op = new Operand(tmpEntry);
@@ -829,11 +838,21 @@ bool ArrayDef::isAllDefined(int& cnt){
     if(expr)
         return false;
     bool temp = false;
+    bool isLastDim = false;
     for (auto &&i : arrDefList)
     {
-        if(i->expr)
+        if(i->expr && i->expr->getSymPtr()->isConstant()){
             cnt++;
+            isLastDim = true;
+        }
+        flag.dimListIter++;
         temp = temp ? true : i->isAllDefined(cnt);
+        flag.dimListIter--;
+    }
+    if(isLastDim){
+        int dimSize = ((ConstantSymbolEntry*)((*flag.dimListIter)->getSymPtr()))->getValueInt();
+        if (arrDefList.size() < dimSize)
+            cnt += dimSize - arrDefList.size();
     }
     return temp;
 }

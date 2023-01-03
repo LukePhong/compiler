@@ -66,7 +66,7 @@ public:
     virtual std::string toStr() = 0;
     size_t getDim() { return dimList.size(); };
     Type* getElementType() { return elementType; };
-    auto getDimList() { return dimList; }
+    std::vector<ExprNode*>& getDimList() { return dimList; }
     std::string getDimTypeStr(bool isInt);
     void countEleNum();
     int getCntEleNum() { return cntEleNum; }
