@@ -106,7 +106,7 @@ private:
     //避免连续声明ID时因为插入临时符号表项导致类型检查时出现 重复定义 错误
     bool isTemp = false;
     //q13添加数组IR支持
-    std::string arrayDefStr = "";
+    std::string arrayDefStr = "zeroinitializer";
 
 public:
     bool isGlobal() const {return scope == GLOBAL;};
