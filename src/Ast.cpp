@@ -16,7 +16,7 @@ struct flags{
     Type* shouldReturn = nullptr;
     bool haveReturn = false;
     bool isInFunc = false;
-    bool isInWhile = false;
+    int isInWhileCnt = 0;
 
     //是否是最后一层条件表达式
     bool isOuterCond = false;
@@ -1142,14 +1142,14 @@ void ExprStmt::typeCheck() {
 
 void BreakStmt::typeCheck() {
 
-    if(!flag.isInWhile){
+    if(!flag.isInWhileCnt){
         std::cout<<"错误！Break语句出现在非法位置！"<<std::endl;
     }
 
 }
 
 void ContinueStmt::typeCheck() {
-    if(!flag.isInWhile){
+    if(!flag.isInWhileCnt){
         std::cout<<"错误！Continue语句出现在非法位置！"<<std::endl;
     }
 }
@@ -1157,10 +1157,10 @@ void ContinueStmt::typeCheck() {
 void WhileStmt::typeCheck() {
 
     //p10break\continue的位置检查
-    flag.isInWhile = true;
+    flag.isInWhileCnt++;
     cond->typeCheck();
     whileBodyStmt->typeCheck();
-    flag.isInWhile = false;
+    flag.isInWhileCnt--;
 }
 
 void FuncParam::typeCheck() {
