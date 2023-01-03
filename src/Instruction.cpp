@@ -718,6 +718,64 @@ void BinaryInstruction::genMachineCode(AsmBuilder* builder)
 void CmpInstruction::genMachineCode(AsmBuilder* builder)
 {
     // TODO
+    
+    auto cur_block = builder->getBlock();
+    auto src1 = genMachineOperand(operands[1]);
+    auto src2 = genMachineOperand(operands[2]);
+
+    //保存当前cmp语句的条件，在条件分支语句中使用
+    cur_block->setBranchCond(opcode);
+
+    MachineInstruction* cur_inst = nullptr;
+    if(src1->isImm())
+    {
+        auto internal_reg = genMachineVReg();
+        cur_inst = new LoadMInstruction(cur_block, internal_reg, src1);
+        cur_block->InsertInst(cur_inst);
+        src1 = new MachineOperand(*internal_reg);
+    }
+    if(src2->isImm())
+    {
+        auto internal_reg = genMachineVReg();
+        cur_inst = new LoadMInstruction(cur_block, internal_reg, src2);
+        cur_block->InsertInst(cur_inst);
+        src2 = new MachineOperand(*internal_reg);
+    }
+
+    cur_inst = new CmpMInstruction(cur_block, src1, src2, opcode);
+    cur_block->InsertInst(cur_inst);
+
+    //是否需要？
+    // //将比较结果存储到dst中，设置两条条件mov语句，给定条件相反，只有一条执行
+    // auto dst = genMachineOperand(operands[0]);
+    // auto trueResult = genMachineImm(1);
+    // auto falseResult = genMachineImm(0);
+    // cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, trueResult, opcode);
+    // cur_block->InsertInst(cur_inst);
+    // switch (opcode)
+    // {
+    // case CmpInstruction::E:
+    //     cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, falseResult, CmpInstruction::NE);
+    //     break;
+    // case CmpInstruction::NE:
+    //     cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, falseResult, CmpInstruction::E);
+    //     break;
+    // case CmpInstruction::G:
+    //     cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, falseResult, CmpInstruction::LE);
+    //     break;
+    // case CmpInstruction::L:
+    //     cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, falseResult, CmpInstruction::GE);
+    //     break;
+    // case CmpInstruction::GE:
+    //     cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, falseResult, CmpInstruction::L);
+    //     break;
+    // case CmpInstruction::LE:
+    //     cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, falseResult, CmpInstruction::G);
+    //     break;
+    // default:
+    //     break;
+    // }
+    // cur_block->InsertInst(cur_inst);
 }
 
 void UncondBrInstruction::genMachineCode(AsmBuilder* builder)
@@ -732,6 +790,15 @@ void UncondBrInstruction::genMachineCode(AsmBuilder* builder)
 void CondBrInstruction::genMachineCode(AsmBuilder* builder)
 {
     // TODO
+    auto cur_block = builder->getBlock();
+    //根据cmp语句时保存的cond跳转到不同块
+    auto true_block = new MachineOperand(".L" + std::to_string(true_branch->getNo()));
+    auto false_block = new MachineOperand(".L" + std::to_string(false_branch->getNo()));
+    MachineInstruction* cur_inst;
+    cur_inst = new BranchMInstruction(cur_block, BranchMInstruction::B, true_block, cur_block->getBranchCond());
+    cur_block->InsertInst(cur_inst);
+    cur_inst = new BranchMInstruction(cur_block, BranchMInstruction::B, false_block, MachineInstruction::NONE);
+    cur_block->InsertInst(cur_inst);
 }
 
 void RetInstruction::genMachineCode(AsmBuilder* builder)
