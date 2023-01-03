@@ -352,10 +352,10 @@ void LoadInstruction::output() const
 }
 
 //q13添加数组IR支持
-GetElementPtrInstruction::GetElementPtrInstruction(Operand *dst, Operand *src_addr, ExprNode* dim, BasicBlock *insert_bb) 
+GetElementPtrInstruction::GetElementPtrInstruction(Operand *dst, Operand *src_addr, Operand * dim, BasicBlock *insert_bb) 
     : LoadInstruction(dst, src_addr, insert_bb), dim(dim) 
 {
-    dim->getOperand()->addUse(this);
+    dim->addUse(this);
 }
 
 void GetElementPtrInstruction::output() const
@@ -372,7 +372,7 @@ void GetElementPtrInstruction::output() const
     // int cnt = 0;
     // for (auto &&i : dimList)
     // {
-        fprintf(yyout, "i64 %s\n", dim->getSymPtr()->toStr().c_str());
+        fprintf(yyout, "%s %s\n", dim->getType()->toStr().c_str(), dim->toStr().c_str());
     //     cnt++;
     //     if(cnt < dimList.size() - 1)
     //         fprintf(yyout, ",");

@@ -626,7 +626,13 @@ void AssignStmt::genCode()
 {
     BasicBlock *bb = builder->getInsertBB();
     expr->genCode();
-    Operand *addr = dynamic_cast<IdentifierSymbolEntry*>(lval->getSymPtr())->getAddr();
+    Operand *addr;
+    if(lval->isInArr()){
+        ((ArrayIndex*)lval)->genLvalCode();
+        addr = lval->getOperand();
+    }else{
+        addr = dynamic_cast<IdentifierSymbolEntry*>(lval->getSymPtr())->getAddr();
+    }
     Operand *src = expr->getOperand();
     src = typeConvention(lval->getSymbolEntry()->getType(), src, bb);
     /***
@@ -755,7 +761,7 @@ void DimArray::genCode() {
     for (size_t i = 0; i < dimList.size(); i++)
     {
         dimList[i]->genCode();
-        new GetElementPtrInstruction(addr, i == 0 ? flag.arrayId->getAddr() : lastAddr, dimList[i], bb);
+        new GetElementPtrInstruction(addr, i == 0 ? flag.arrayId->getAddr() : lastAddr, dimList[i]->getOperand(), bb);
         lastAddr = addr;
         if(i == dimList.size() - 1){
             dst = lastAddr;
@@ -885,6 +891,15 @@ void ArrayIndex::genCode() {
         // without it break for the same reason but found at toBB_f->addPred(i);
         false_list.push_back(new UncondBrInstruction(nullptr, falseBlock)); // when && break at a CondBrInstruction miss false_branch found at output and none of block end with CondBrInstruction
     }
+}
+
+void ArrayIndex::genLvalCode()
+{
+    BasicBlock *bb = builder->getInsertBB();
+    flag.arrayId = (IdentifierSymbolEntry*)arrDef;
+    dim->genCode();
+    flag.arrayId = nullptr;
+    dst = dim->getDst();
 }
 
 void EmptyStmt::genCode() {

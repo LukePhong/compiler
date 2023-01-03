@@ -74,12 +74,12 @@ public:
 class GetElementPtrInstruction : public LoadInstruction
 {
 public:
-    GetElementPtrInstruction(Operand *dst, Operand *src_addr, ExprNode* dim, BasicBlock *insert_bb = nullptr);
+    GetElementPtrInstruction(Operand *dst, Operand *src_addr, Operand * dim, BasicBlock *insert_bb = nullptr);
     void output() const;
 private:
     // IdentifierSymbolEntry* arrDef;
     // std::vector<ExprNode*>& dimList;
-    ExprNode* dim;
+    Operand * dim;
 };
 
 class StoreInstruction : public Instruction
