@@ -268,6 +268,31 @@ MovMInstruction::MovMInstruction(MachineBlock* p, int op,
 
 void MovMInstruction::output() 
 {
+    //如何表示cond？
+    // switch (cond)
+    // {
+    // case EQ:
+    //     fprintf(yyout, "\tmoveq\t");
+    //     break;
+    // case NE:
+    //     fprintf(yyout, "\tmovne\t");
+    //     break;
+    // case LT:
+    //     fprintf(yyout, "\tmovlt\t");
+    //     break;
+    // case GT:
+    //     fprintf(yyout, "\tmovgt\t");
+    //     break;
+    // case LE:
+    //     fprintf(yyout, "\tmovle\t");
+    //     break;
+    // case GE:
+    //     fprintf(yyout, "\tmovge\t");
+    //     break;
+    // default:
+    //     fprintf(yyout, "\tmov\t");
+    //     break;
+    // }
     fprintf(yyout, "\tmov ");
     this->def_list[0]->output();
     fprintf(yyout, ", ");
@@ -292,7 +317,30 @@ void BranchMInstruction::output()
     switch (op)
     {
     case B:
-        fprintf(yyout, "\tb\t");
+        switch (cond)
+        {
+        case EQ:
+            fprintf(yyout, "\tbeq\t");
+            break;
+        case NE:
+            fprintf(yyout, "\tbne\t");
+            break;
+        case LT:
+            fprintf(yyout, "\tblt\t");
+            break;
+        case GT:
+            fprintf(yyout, "\tbgt\t");
+            break;
+        case LE:
+            fprintf(yyout, "\tble\t");
+            break;
+        case GE:
+            fprintf(yyout, "\tbge\t");
+            break;
+        default:
+            fprintf(yyout, "\tb\t");
+            break;
+        }
         break;
     case BL:
         fprintf(yyout, "\tbl\t");
@@ -312,6 +360,13 @@ CmpMInstruction::CmpMInstruction(MachineBlock* p,
     int cond)
 {
     // TODO
+    this->parent = p;
+    this->type = MachineInstruction::CMP;
+    this->use_list.push_back(src1);
+    this->use_list.push_back(src2);
+    src1->setParent(this);
+    src2->setParent(this);
+    this->cond = cond;
 }
 
 void CmpMInstruction::output()
@@ -319,6 +374,11 @@ void CmpMInstruction::output()
     // TODO
     // Jsut for reg alloca test
     // delete it after test
+    fprintf(yyout, "\tcmp ");
+    this->use_list[0]->output();
+    fprintf(yyout, ", ");
+    this->use_list[1]->output();
+    fprintf(yyout, "\n");
 }
 
 StackMInstrcuton::StackMInstrcuton(MachineBlock* p, int op, 
