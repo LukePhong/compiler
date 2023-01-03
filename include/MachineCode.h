@@ -156,6 +156,7 @@ private:
     std::vector<MachineInstruction*> inst_list;
     std::set<MachineOperand*> live_in;
     std::set<MachineOperand*> live_out;
+    int BranchCond = MachineInstruction::NONE;
 public:
     std::vector<MachineInstruction*>& getInsts() {return inst_list;};
     std::vector<MachineInstruction*>::iterator begin() { return inst_list.begin(); };
@@ -170,6 +171,8 @@ public:
     std::vector<MachineBlock*>& getPreds() {return pred;};
     std::vector<MachineBlock*>& getSuccs() {return succ;};
     void output();
+    int getBranchCond(){ return BranchCond; };
+    void setBranchCond(int BCond){ this->BranchCond = BCond; };
 };
 
 class MachineFunction
