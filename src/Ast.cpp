@@ -528,7 +528,6 @@ void DeclStmt::genCode()
             if(exprList[cnt]){
                 exprList[cnt]->genCode();
                 se->setGlbConst(exprList[cnt]->getSymbolEntry());
-                builder->getUnit()->getGlbIds().push_back(se);
             }else if(defArrList[cnt]){
                 //q13添加数组IR支持
                 ((ArrayType*)idList[cnt]->getSymbolEntry()->getType())->countEleNum();
@@ -537,8 +536,9 @@ void DeclStmt::genCode()
                 defArrList[cnt]->genCode();
                 builder->getUnit()->getGlbIds().push_back(flag.arrayId);
                 flag.arrayId = nullptr;
+                continue;
             }
-            // builder->getUnit()->getGlbIds().push_back(se);
+            builder->getUnit()->getGlbIds().push_back(se);
         }
         else if(se->isLocal() || se->isParam())
         {
