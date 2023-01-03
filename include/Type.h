@@ -140,6 +140,8 @@ class TypeSystem
 {
 private:
     static IntType commonInt;
+    static IntType shortInt;
+    static IntType longInt;
     static BoolType commonBool;
     static FloatType commonFloat;
     static VoidType commonVoid;
@@ -148,6 +150,8 @@ private:
     static FunctionType commonFunc;
 public:
     static Type *intType;
+    static Type *shortIntType;
+    static Type *longIntType;
     static Type *floatType;
     static Type *voidType;
     static Type *boolType;

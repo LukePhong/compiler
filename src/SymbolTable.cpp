@@ -157,15 +157,16 @@ void IdentifierSymbolEntry::outputSysFunc(){
     
     fprintf(yyout, "declare %s @%s(", 
         dynamic_cast<FunctionType*>(type)->getRetType()->toStr().c_str(), (const char*)name.c_str());
-    bool first = true;
+    int cnt = 0;
+    int size = dynamic_cast<FunctionType*>(type)->getParamsType().size();
     for(auto type : dynamic_cast<FunctionType*>(type)->getParamsType()){
         if(!type->isVoid()){
-            if(!first){
-                first = false;
+            fprintf(yyout,"%s", type->toStr().c_str());
+            if(cnt != size - 1){
                 fprintf(yyout, ", ");
             }
-            fprintf(yyout,"%s", type->toStr().c_str());
         }
+        cnt++;
     }
     fprintf(yyout, ")\n");
 

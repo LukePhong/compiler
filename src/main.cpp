@@ -143,6 +143,22 @@ int main(int argc, char *argv[])
     auto id11 = new IdentifierSymbolEntry(funcType11, "putfloat", 0);
     identifiers->installFunc("putfloat", id11);
     unit.getSysFuncs().push_back(id11);
+
+    vector<Type*>().swap(tempParaType);
+    tempParaType.push_back(new PointerType(TypeSystem::shortIntType));
+    tempParaType.push_back(TypeSystem::shortIntType);
+    tempParaType.push_back(TypeSystem::longIntType);
+    tempParaType.push_back(TypeSystem::boolType);
+    auto funcType12 = new FunctionType(TypeSystem::voidType, tempParaType);
+    auto id12 = new IdentifierSymbolEntry(funcType12, "llvm.memset.p0i8.i64", 0);
+    identifiers->installFunc("llvm.memset.p0i8.i64", id12);
+    unit.getSysFuncs().push_back(id12);
+
+    tempParaType[1] = new PointerType(TypeSystem::shortIntType);
+    auto funcType13 = new FunctionType(TypeSystem::voidType, tempParaType);
+    auto id13 = new IdentifierSymbolEntry(funcType13, "llvm.memset.p0i8.i64", 0);
+    identifiers->installFunc("llvm.memset.p0i8.i64", id13);
+    unit.getSysFuncs().push_back(id13);
     //TODO: putf
 
     yyparse();
