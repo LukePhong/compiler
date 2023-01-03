@@ -105,6 +105,37 @@ void ArrayType::genDimTypeStrings(){
     
 }
 
+Type* ArrayType::getTrimType(){
+    if(trimedType)
+        return trimedType;
+
+    if(dimList.size()>1){
+        ArrayType* t;
+        if(elementType->isInt()){
+            t = new ArrayIntType((ArrayIntType*)this);
+        }else{
+            t = new ArrayFloatType((ArrayFloatType*)this);
+        }
+        t->cntEleNum /= ((ConstantSymbolEntry*)dimList[0]->getSymbolEntry())->getValueInt();
+        t->dimList.erase(t->dimList.begin());
+        t->dimTypeStrArray = this->dimTypeStrArray;
+        assert(!t->dimTypeStrArray.empty());
+        t->dimTypeStrArray.erase(t->dimTypeStrArray.begin());
+        trimedType = t;
+        return t;
+    }else{
+        Type* t;
+        if(elementType->isInt()){
+            t = new IntType(4);
+        }else{
+            t = new FloatType(4);
+        }
+        trimedType = t;
+        return t;
+    }
+    
+}
+
 std::string VoidType::toStr()
 {
     return "void";

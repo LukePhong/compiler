@@ -570,12 +570,23 @@ void DeclStmt::genCode()
             entry->insertFront(alloca);                                 // allocate instructions should be inserted into the begin of the entry block.
             se->setAddr(addr);                                          // set the addr operand in symbol entry so that we can use it in subsequent code generation.
 
+            if(se->getType()->isArrayType()){
+                //q13添加数组IR支持
+                ((ArrayType*)idList[cnt]->getSymbolEntry()->getType())->countEleNum();
+                ((ArrayType*)idList[cnt]->getSymbolEntry()->getType())->genDimTypeStrings();
+            }
+
             auto expr = exprList[cnt];
             if(expr){
                 expr->genCode();
                 Operand *src = expr->getOperand();
                 src = typeConvention(se->getType(), src, bb);
                 new StoreInstruction(addr, src, bb);
+            }else if(defArrList[cnt]){
+                flag.arrayId = ((IdentifierSymbolEntry*)idList[cnt]->getSymbolEntry());
+                // defArrList[cnt]->genCode();
+                // builder->getUnit()->getGlbIds().push_back(flag.arrayId);
+                flag.arrayId = nullptr;
             }
         }
         cnt++;
@@ -734,11 +745,28 @@ void UnaryExpr::genCode() {
 
 void DimArray::genCode() {
 
-    for (auto &&i : dimList)
+    BasicBlock *bb = builder->getInsertBB();
+
+    auto trim = ((ArrayType*)flag.arrayId->getType())->getTrimType();
+    auto type = new PointerType(trim);//这里应该剥壳一层
+    auto addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
+    auto addr = new Operand(addr_se); 
+    Operand* lastAddr;
+    for (size_t i = 0; i < dimList.size(); i++)
     {
-        i->genCode();
+        dimList[i]->genCode();
+        new GetElementPtrInstruction(addr, i == 0 ? flag.arrayId->getAddr() : lastAddr, dimList[i], bb);
+        lastAddr = addr;
+        if(i == dimList.size() - 1){
+            dst = lastAddr;
+            return;
+        }
+        trim = ((ArrayType*)trim)->getTrimType();
+        type = new PointerType(trim);     //这里应该剥壳一层
+        addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
+        addr = new Operand(addr_se); 
     }
-    
+    dst = lastAddr;
 }
 
 void ArrayDef::genCode() {
@@ -843,11 +871,11 @@ void ArrayIndex::genCode() {
 
     BasicBlock *bb = builder->getInsertBB();
     Function *func = bb->getParent();
-
+    flag.arrayId = (IdentifierSymbolEntry*)arrDef;
     dim->genCode();
-
-    Operand *addr = dynamic_cast<IdentifierSymbolEntry*>(arrDef)->getAddr();
-    new ArrLoadInstruction(dst, addr, (IdentifierSymbolEntry*)arrDef, *dim->getDimList(), bb);
+    flag.arrayId = nullptr;
+    // Operand *addr = dynamic_cast<IdentifierSymbolEntry*>(arrDef)->getAddr();
+    new LoadInstruction(dst, dim->getDst(), bb);
 
     if(flag.isUnderCond && flag.isOuterCond){
         BasicBlock *falseBlock;

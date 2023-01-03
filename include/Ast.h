@@ -124,6 +124,7 @@ class DimArray : public StmtNode
 {
 private:
     std::vector<ExprNode*> dimList;
+    Operand *dst;
 public:
     DimArray(){};
     void addDim(ExprNode* next);
@@ -131,6 +132,8 @@ public:
     std::vector<ExprNode*>* getDimList() { return &dimList; };
     void typeCheck();
     void genCode();
+    void setDst(Operand *d) { dst = d; }
+    Operand *getDst() { return dst; }
 };
 
 //q9数组定义

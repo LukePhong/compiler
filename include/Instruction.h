@@ -71,14 +71,15 @@ public:
     void genMachineCode(AsmBuilder*);
 };
 
-class ArrLoadInstruction : public LoadInstruction
+class GetElementPtrInstruction : public LoadInstruction
 {
 public:
-    ArrLoadInstruction(Operand *dst, Operand *src_addr, IdentifierSymbolEntry* arrDef, std::vector<ExprNode*>& dimList, BasicBlock *insert_bb = nullptr);
+    GetElementPtrInstruction(Operand *dst, Operand *src_addr, ExprNode* dim, BasicBlock *insert_bb = nullptr);
     void output() const;
 private:
-    IdentifierSymbolEntry* arrDef;
-    std::vector<ExprNode*>& dimList;
+    // IdentifierSymbolEntry* arrDef;
+    // std::vector<ExprNode*>& dimList;
+    ExprNode* dim;
 };
 
 class StoreInstruction : public Instruction

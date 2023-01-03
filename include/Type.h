@@ -58,6 +58,7 @@ private:
     Type *elementType;
     int cntEleNum;
     std::vector<std::string> dimTypeStrArray;
+    Type* trimedType = nullptr;
 public:
     //如果这里没有eleType的话，使用arrayIntType定义的数组再访问时如果访问到eleType将会是null
     ArrayType(Type::typeKind typeKind, Type *elementType) : Type(typeKind), elementType(elementType){};
@@ -71,12 +72,14 @@ public:
     int getCntEleNum() { return cntEleNum; }
     void genDimTypeStrings();
     auto getDimTypeStrings() { return dimTypeStrArray; }
+    Type* getTrimType();
 };
 
 class ArrayIntType : public ArrayType
 {
 public:
     ArrayIntType(Type *elementType) : ArrayType(Type::ARRAY_INT, elementType) {};
+    ArrayIntType(ArrayIntType* a) : ArrayType(Type::ARRAY_INT, a->getDimList(), a->getElementType()) {};
     ArrayIntType(std::vector<ExprNode*> dimList, Type *elementType) : ArrayType(Type::ARRAY_INT, dimList, elementType) {}; 
     std::string toStr();
     // Type* getElementType() { return  };
@@ -94,6 +97,7 @@ public:
 class ArrayFloatType : public ArrayType
 {
 public:
+    ArrayFloatType(ArrayFloatType* a) : ArrayType(Type::ARRAY_FLOAT, a->getDimList(), a->getElementType()) {};
     ArrayFloatType(Type *elementType) : ArrayType(Type::ARRAY_FLOAT, elementType) {};
     ArrayFloatType(std::vector<ExprNode*> dimList, Type *elementType) : ArrayType(Type::ARRAY_FLOAT, dimList, elementType){};
     std::string toStr();
