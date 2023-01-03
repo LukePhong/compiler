@@ -185,4 +185,12 @@ public:
     enum {I2F, F2I};
 };
 
+class BitCastInstruction : public ZextInstruction
+{
+public:
+    BitCastInstruction(Operand *dst, Operand *src, BasicBlock *insert_bb = nullptr) : ZextInstruction(dst, src, insert_bb) {};
+    void output() const;
+    void genMachineCode(AsmBuilder*);
+};
+
 #endif

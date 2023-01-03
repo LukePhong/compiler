@@ -478,6 +478,19 @@ void ZextInstruction::genMachineCode(AsmBuilder* builder){
 
 }
 
+void BitCastInstruction::output() const
+{
+    std::string dst = operands[0]->toStr();
+    std::string src = operands[1]->toStr();
+    std::string dst_type = operands[0]->getType()->toStr();
+    std::string src_type = operands[1]->getType()->toStr();
+    fprintf(yyout, "  %s = bitcast %s %s to %s\n", dst.c_str(), src_type.c_str(), src.c_str(), dst_type.c_str());
+}
+
+void BitCastInstruction::genMachineCode(AsmBuilder* builder){
+
+}
+
 IntFloatCastInstruction::IntFloatCastInstruction(unsigned opcode, Operand *dst, Operand *src, BasicBlock *insert_bb) : Instruction(CAST, insert_bb)
 {
     this->opcode = opcode;

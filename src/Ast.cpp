@@ -28,6 +28,7 @@ struct flags{
     std::stringstream arrayDefString;
     IdentifierSymbolEntry* arrayId;
     std::stack<std::vector<ArrayDef*>::iterator> arrDefIterStk;
+    bool isOuterArrDecl = false;
     
 } flag;
 
@@ -533,6 +534,7 @@ void DeclStmt::genCode()
                 ((ArrayType*)idList[cnt]->getSymbolEntry()->getType())->countEleNum();
                 ((ArrayType*)idList[cnt]->getSymbolEntry()->getType())->genDimTypeStrings();
                 flag.arrayId = ((IdentifierSymbolEntry*)idList[cnt]->getSymbolEntry());
+                flag.isOuterArrDecl = true;
                 defArrList[cnt]->genCode();
                 builder->getUnit()->getGlbIds().push_back(flag.arrayId);
                 flag.arrayId = nullptr;
@@ -584,7 +586,8 @@ void DeclStmt::genCode()
                 new StoreInstruction(addr, src, bb);
             }else if(defArrList[cnt]){
                 flag.arrayId = ((IdentifierSymbolEntry*)idList[cnt]->getSymbolEntry());
-                // defArrList[cnt]->genCode();
+                flag.isOuterArrDecl = true;
+                defArrList[cnt]->genCode();
                 // builder->getUnit()->getGlbIds().push_back(flag.arrayId);
                 flag.arrayId = nullptr;
             }
@@ -776,14 +779,39 @@ void DimArray::genCode() {
 }
 
 void ArrayDef::genCode() {
+    BasicBlock *bb = builder->getInsertBB();
+
     int cnt = 0;
-    if(isAllDefined(cnt)){
-        flag.arrDefIterStk.push(arrDefList.begin());
-        getArrayDefStr(0);
-        flag.arrayId->setArrDefStr(flag.arrayDefString.str());
-        flag.arrayDefString.clear();    // 清空流
-        flag.arrayDefString.str("");
-        std::stack<std::vector<ArrayDef*>::iterator>().swap(flag.arrDefIterStk);
+    if(flag.isOuterArrDecl){
+        flag.isOuterArrDecl = false;
+        if(!arrDefList.empty() && isAllDefined(cnt)){
+            flag.arrDefIterStk.push(arrDefList.begin());
+            getArrayDefStr(0);
+            flag.arrayId->setArrDefStr(flag.arrayDefString.str());
+            flag.arrayDefString.clear();    // 清空流
+            flag.arrayDefString.str("");
+            std::stack<std::vector<ArrayDef*>::iterator>().swap(flag.arrDefIterStk);
+        }else if(arrDefList.empty()){
+            auto tmpEntry = new TemporarySymbolEntry(new PointerType(TypeSystem::shortIntType), SymbolTable::getLabel());
+            auto op = new Operand(tmpEntry);
+            new BitCastInstruction(op, flag.arrayId->getAddr(), bb);
+            std::vector<Operand*> ops;
+            ops.push_back(op);
+            auto c1 = new ConstantSymbolEntry(TypeSystem::shortIntType, 0);
+            auto op1 = new Operand(c1);
+            ops.push_back(op1);
+            auto c2 = new ConstantSymbolEntry(TypeSystem::longIntType, 32);
+            auto op2 = new Operand(c2);
+            ops.push_back(op2);
+            auto c3 = new ConstantSymbolEntry(TypeSystem::boolType, 0);
+            auto op3 = new Operand(c3);
+            ops.push_back(op3);
+            std::vector<Type*> types{new PointerType(TypeSystem::shortIntType), TypeSystem::shortIntType, TypeSystem::longIntType, TypeSystem::boolType};
+            auto toCall = identifiers->lookup("llvm.memset.p0i8.i64", types);
+            auto tmpDst = new TemporarySymbolEntry(TypeSystem::voidType, SymbolTable::getLabel());
+            auto opDst = new Operand(tmpDst);
+            new FunctionCallInstuction(opDst, ops, (IdentifierSymbolEntry*)toCall, bb);
+        }
     }else{
         if(expr)
             expr->genCode();

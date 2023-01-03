@@ -22,7 +22,7 @@ int main(){
     return e[3][1][0] + e[0][0][0] + e[0][1][0] + d[3][0];
 }*/
 //test array define
-int main(){
+int main(){f
     int a[4][2] = {};
     int b[4][2] = {1, 2, 3, 4, 5, 6, 7, 8};
     int c[4][2] = {{1, 2}, {3, 4}, {5, 6}, {7, 8}};
