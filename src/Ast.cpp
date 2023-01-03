@@ -17,6 +17,10 @@ struct flags{
     bool haveReturn = false;
     bool isInFunc = false;
     int isInWhileCnt = 0;
+    
+    //break和continue需要获得当前层次whileStmt的Cond_bb和End_bb
+    std::stack<BasicBlock*> whileCondStack;
+    std::stack<BasicBlock*> whileEndStack;
 
     //是否是最后一层条件表达式
     bool isOuterCond = false;
@@ -858,11 +862,29 @@ void ExprStmt::genCode() {
 }
 
 void BreakStmt::genCode() {
-
+    assert(flag.whileEndStack.size()!=0);
+    BasicBlock* bb = builder->getInsertBB();
+    Function *func = bb->getParent();
+    //获取当前while循环的end_bb
+    BasicBlock* end_bb = flag.whileEndStack.top();
+    //无条件跳转到end_bb
+    new UncondBrInstruction(end_bb, bb);
+    // 声明一个新的基本块用来插入后续的指令
+    BasicBlock* nextBlock = new BasicBlock(func);
+    builder->setInsertBB(nextBlock);
 }
 
 void ContinueStmt::genCode() {
-
+    assert(flag.whileCondStack.size()!=0);
+    BasicBlock* bb = builder->getInsertBB();
+    Function *func = bb->getParent();
+    //获取当前while循环的cond_bb
+    BasicBlock* cond_bb = flag.whileCondStack.top();
+    //无条件跳转到cond_bb
+    new UncondBrInstruction(cond_bb, bb);
+    // 声明一个新的基本块用来插入后续的指令
+    BasicBlock* nextBlock = new BasicBlock(func);
+    builder->setInsertBB(nextBlock);
 }
 
 void WhileStmt::genCode() {
@@ -877,7 +899,10 @@ void WhileStmt::genCode() {
     then_bb = new BasicBlock(func);
     cond_bb = new BasicBlock(func);
     end_bb = new BasicBlock(func);
-
+    
+    //当前层次whileStmt的 cond和end bb入栈
+    flag.whileCondStack.push(cond_bb);
+    flag.whileEndStack.push(end_bb);
 
     new UncondBrInstruction(cond_bb, bb_prev);
     builder->setInsertBB(cond_bb);
@@ -896,6 +921,10 @@ void WhileStmt::genCode() {
     new UncondBrInstruction(cond_bb, then_bb);
 
     builder->setInsertBB(end_bb);
+    
+    //当前层次whileStmt的 cond和end bb出栈
+    flag.whileCondStack.pop();
+    flag.whileEndStack.pop();
 }
 
 void FuncParam::genCode() {
