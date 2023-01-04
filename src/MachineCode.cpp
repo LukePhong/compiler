@@ -1,4 +1,5 @@
 #include "MachineCode.h"
+#include "Unit.h"
 extern FILE* yyout;
 
 MachineOperand::MachineOperand(int tp, int val)
@@ -10,7 +11,7 @@ MachineOperand::MachineOperand(int tp, int val)
         this->reg_no = val;
 }
 
-MachineOperand::MachineOperand(std::string label)
+MachineOperand::MachineOperand(std::string label, bool isFunc) : isFunc(isFunc)
 {
     this->type = MachineOperand::LABEL;
     this->label = label;
@@ -83,7 +84,7 @@ void MachineOperand::output()
         PrintReg();
         break;
     case LABEL:
-        if (this->label.substr(0, 2) == ".L")
+        if (this->label.substr(0, 2) == ".L" || isFunc)
             fprintf(yyout, "%s", this->label.c_str());
         else
             fprintf(yyout, "addr_%s", this->label.c_str());
@@ -381,18 +382,86 @@ void CmpMInstruction::output()
     fprintf(yyout, "\n");
 }
 
-StackMInstrcuton::StackMInstrcuton(MachineBlock* p, int op, 
-    MachineOperand* src,
+StackMInstruction::StackMInstruction(MachineBlock* p, int op, 
+    std::vector<MachineOperand*> src,
     int cond)
 {
-    // TODO
+    this->parent = p;
+    this->type = MachineInstruction::STACK;
+    this->op = op;
+    this->cond = cond;
+    this->use_list = src;
+    for(auto reg : use_list){
+        reg->setParent(this);
+    }
 }
 
-void StackMInstrcuton::output()
+void StackMInstruction::output()
 {
-    // TODO
+    switch(op){
+    case PUSH:
+        fprintf(yyout, "\tpush {");
+        break;
+    case POP:
+        fprintf(yyout, "\tpop {");
+        break;
+    case VPUSH:
+        fprintf(yyout, "\tvpush {");
+        break;
+    case VPOP:
+        fprintf(yyout, "\tvpop {");
+        break;
+    }
+    if(use_list.size() <= 16) {
+        this->use_list[0]->output();
+        for (long unsigned int i = 1; i < use_list.size(); i++) {
+            fprintf(yyout, ", ");
+            this->use_list[i]->output();
+        }
+    }
+    // 浮点寄存器可能会很多 每次只能push/pop16个
+    else {
+        this->use_list[0]->output();
+        for (long unsigned int i = 1; i < 16; i++) {
+            fprintf(yyout, ", ");
+            this->use_list[i]->output();
+        }
+        fprintf(yyout, "}\n");
+        if(op == VPUSH) {
+            fprintf(yyout, "\tvpush ");
+        }
+        else if(op == VPOP){
+            fprintf(yyout, "\tvpop ");
+        }
+        fprintf(yyout, "{");
+        this->use_list[16]->output();
+        for (long unsigned int i = 17; i < use_list.size(); i++) {
+            fprintf(yyout, ", ");
+            this->use_list[i]->output();
+        }
+    }
+    fprintf(yyout, "}\n");
 }
 
+ZextMInstruction::ZextMInstruction(MachineBlock *p, MachineOperand *dst, MachineOperand *src, int cond) {
+    this->parent = p;
+    this->type = MachineInstruction::ZEXT;
+    this->cond = cond;
+    this->def_list.push_back(dst);
+    this->use_list.push_back(src);
+    dst->setParent(this);
+    src->setParent(this);
+}
+
+void ZextMInstruction::output() {
+    fprintf(yyout, "\tuxtb ");
+    def_list[0]->output();
+    fprintf(yyout, ", ");
+    use_list[0]->output();
+    fprintf(yyout, "\n");
+}
+
+/*============================================================================*/
 MachineFunction::MachineFunction(MachineUnit* p, SymbolEntry* sym_ptr) 
 { 
     this->parent = p; 
@@ -421,16 +490,103 @@ void MachineFunction::output()
     *  2. fp = sp
     *  3. Save callee saved register
     *  4. Allocate stack space for local variable */
-    
+    fprintf(yyout, "\tpush {fp}\n");
+    fprintf(yyout, "\tmov fp, sp\n");
+    size_t cnt = 0;
+    if(!saved_regs.empty()){
+        fprintf(yyout, "\tpush {");
+        for (auto &&i : saved_regs)
+        {
+            fprintf(yyout, "r%d", i);
+            if(cnt != saved_regs.size() - 1)
+                fprintf(yyout, ", ");
+            cnt++;
+        }
+        fprintf(yyout, "}\n");
+    }
+    if(stack_size!=0){
+        if(stack_size > 255) {
+            fprintf(yyout, "\tldr r4,=%d\n", stack_size);
+            fprintf(yyout, "\tsub sp, sp, r4\n");
+        }
+        else {
+            fprintf(yyout, "\tsub sp, sp, #%d\n", stack_size);
+        }
+    }
     // Traverse all the block in block_list to print assembly code.
     for(auto iter : block_list)
         iter->output();
+
+    if(stack_size!=0){
+        if(stack_size > 255) {
+            fprintf(yyout, "\tldr r4,=%d\n", stack_size);
+            fprintf(yyout, "\tadd sp, sp, r4\n");
+        }
+        else {
+            fprintf(yyout, "\tadd sp, sp, #%d\n", stack_size);
+        }
+    }
+    //恢复saved registers和fp
+    fprintf(yyout, "\tpop {");
+    cnt = 0;
+    if(!saved_regs.empty()){
+        for (auto &&i : saved_regs)
+        {
+            fprintf(yyout, "r%d", i);
+            if(cnt != saved_regs.size() - 1)
+                fprintf(yyout, ", ");
+            cnt++;
+        }
+    }
+    fprintf(yyout, "fp}\n");
+    // 3. Generate bx instruction
+    fprintf(yyout, "\tbx lr\n\n");
 }
 
 void MachineUnit::PrintGlobalDecl()
 {
     // TODO:
     // You need to print global variable/const declarition code;
+    fprintf(yyout, "\t.data\n");
+    for(IdentifierSymbolEntry* var : unit->getGlbIds()) {
+        if(var->getType()->isArrayType()) {
+            if(((ArrayType*)var->getType())->getCntEleNum() == 0) {
+                fprintf(yyout, "\t.comm\t%s, 4, 4\n", var->toAsmStr().c_str());
+            }
+            else {
+                fprintf(yyout, "\t.global %s\n", var->toAsmStr().c_str());
+                fprintf(yyout, "\t.align 4\n");
+                fprintf(yyout,"\t.size %s, 4\n", var->toAsmStr().c_str());
+                fprintf(yyout,"%s:\n", var->toAsmStr().c_str());
+                // TODO: 待将所有的数组元素初始值保存下来后填充
+                // if(((ArrayType*)var->getType())->getElementType()->isInt()) {
+                //     for (auto value: var->arrayValues) {
+                //         fprintf(yyout, "\t.word %d\n", int(value));
+                //     }
+                // }
+                // else {
+                //     ;
+                // }
+            }
+        }
+        else {
+            if(!var->getGlbValue()){
+                fprintf(yyout, "\t.comm\t%s, 4, 4\n", var->toAsmStr().c_str());
+            }else{
+                fprintf(yyout, "\t.global %s\n", var->toAsmStr().c_str());
+                fprintf(yyout, "\t.align 4\n");
+                fprintf(yyout,"\t.size %s, 4\n", var->toAsmStr().c_str());
+                fprintf(yyout,"%s:\n", var->toAsmStr().c_str());
+                if(var->getGlbValue()){
+                    if(var->getType()->isInt()) {
+                        fprintf(yyout, "\t.word %s\n", var->getGlbValue()->toStr().c_str());
+                    } else {
+                        ;
+                    }
+                }
+            }
+        }
+    }
 }
 
 void MachineUnit::output()
@@ -446,4 +602,12 @@ void MachineUnit::output()
     PrintGlobalDecl();
     for(auto iter : func_list)
         iter->output();
+    PrintBridges();
+}
+
+void MachineUnit::PrintBridges(){
+    for (auto sym_ptr: unit->getGlbIds()) {
+        fprintf(yyout, "addr_%s:\n", sym_ptr->toAsmStr().c_str());
+        fprintf(yyout, "\t.word %s\n", sym_ptr->toAsmStr().c_str());
+    }
 }

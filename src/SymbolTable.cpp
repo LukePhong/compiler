@@ -111,6 +111,11 @@ std::string IdentifierSymbolEntry::toStr()
     return "@" + name;
 }
 
+std::string IdentifierSymbolEntry::toAsmStr()
+{
+    return name;
+}
+
 void IdentifierSymbolEntry::outputGlbId()
 {
     // assert(isGlobal() && (type->isNumber() || type->isArrayType()));

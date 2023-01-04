@@ -23,6 +23,8 @@ class MachineFunction;
 class MachineBlock;
 class MachineInstruction;
 
+class Unit;
+
 class MachineOperand
 {
 private:
@@ -31,10 +33,11 @@ private:
     int val;  // value of immediate number
     int reg_no; // register no
     std::string label; // address label
+    bool isFunc;
 public:
     enum { IMM, VREG, REG, LABEL };
     MachineOperand(int tp, int val);
-    MachineOperand(std::string label);
+    MachineOperand(std::string label, bool isFunc = false);
     bool operator == (const MachineOperand&) const;
     bool operator < (const MachineOperand&) const;
     bool isImm() { return this->type == IMM; }; 
@@ -67,7 +70,7 @@ protected:
     void addUse(MachineOperand* ope) { use_list.push_back(ope); };
     // Print execution code after printing opcode
     void PrintCond();
-    enum instType { BINARY, LOAD, STORE, MOV, BRANCH, CMP, STACK };
+    enum instType { BINARY, LOAD, STORE, MOV, BRANCH, CMP, STACK, ZEXT};
 public:
     enum condType { EQ, NE, LT, LE , GT, GE, NONE };
     virtual void output() = 0;
@@ -137,16 +140,26 @@ public:
     void output();
 };
 
-class StackMInstrcuton : public MachineInstruction
+class StackMInstruction : public MachineInstruction
 {
 public:
-    enum opType { PUSH, POP };
-    StackMInstrcuton(MachineBlock* p, int op, 
-                MachineOperand* src,
+    enum opType { PUSH, POP, VPUSH, VPOP };
+    StackMInstruction(MachineBlock* p, int op, 
+                std::vector<MachineOperand*> src,
                 int cond = MachineInstruction::NONE);
     void output();
 };
 
+class ZextMInstruction : public MachineInstruction
+{
+public:
+    ZextMInstruction(MachineBlock* p,
+                MachineOperand* dst, MachineOperand* src,
+                int cond = MachineInstruction::NONE);
+    void output();
+};
+
+/*============================================================================*/
 class MachineBlock
 {
 private:
@@ -203,12 +216,17 @@ class MachineUnit
 {
 private:
     std::vector<MachineFunction*> func_list;
+    // std::vector<IdentifierSymbolEntry*> global_var_list;
+    Unit* unit;
     void PrintGlobalDecl();
+    void PrintBridges();
 public:
     std::vector<MachineFunction*>& getFuncs() {return func_list;};
     std::vector<MachineFunction*>::iterator begin() { return func_list.begin(); };
     std::vector<MachineFunction*>::iterator end() { return func_list.end(); };
     void InsertFunc(MachineFunction* func) { func_list.push_back(func);};
+    // void insertGlobalVar(IdentifierSymbolEntry* sym_ptr) {global_var_list.push_back(sym_ptr);};
+    void setUnit(Unit* u) { unit = u;}
     void output();
 };
 

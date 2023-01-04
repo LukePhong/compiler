@@ -126,6 +126,7 @@ public:
     // IdentifierSymbolEntry(Type *type, std::string name, int scope, int value);
     virtual ~IdentifierSymbolEntry() {};
     std::string toStr();
+    std::string toAsmStr();
     int getScope() const {return scope;};
     // You can add any function you need here.
     bool paramListMarch(std::vector<Type*> typeList);
@@ -141,6 +142,7 @@ public:
         else
             glbValue = new ConstantSymbolEntry(type, cst->getValueFloat());
     }
+    ConstantSymbolEntry* getGlbValue() { return glbValue; }
     void setArrDefStr(std::string s) { arrayDefStr = s;}
     std::string getArrDefStr() { return arrayDefStr; }
 };

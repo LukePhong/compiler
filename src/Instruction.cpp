@@ -446,7 +446,121 @@ void FunctionCallInstuction::output() const
 }
 
 void FunctionCallInstuction::genMachineCode(AsmBuilder* builder){
+    int saved_reg_cnt = 0;
+    auto cur_block = builder->getBlock();
+    MachineInstruction* cur_inst = nullptr;
+    std::vector<MachineOperand*> additional_args;
+    // for(unsigned int i = 1;i < operands.size();i++){
+    for(unsigned int i = operands.size() - 1; i > 0; i--){
+        //如果类型是数组，需要考虑局部数组指针的情况
+        if(operands[i]->getEntry()->getType()->isArrayType()){
+            //需要保证不是值而是数组指针
+            // bool isPointer = false;
+            // if(((ArrayType*)operands[i]->getEntry()->getType())->getElementType()->isInt()){
+            //     isPointer = dynamic_cast<IntArrayType*>(operands[i]->getEntry()->getType())->getPointer();
+            //     // dynamic_cast<IntArrayType*>(operands[i]->getEntry()->getType())->setPointer(false);
+            //     //如果第一维为-1，表明其为指针，传参时需要注意不加fp
+            //     if(dynamic_cast<IntArrayType*>(operands[i]->getEntry()->getType())->getDimensions()[0]==-1){
+            //         isPointer = false;
+            //     }
+            // }else{
+            //     ;
+            // }
+            //必须保证是局部数组，而且不是传进来的参数
+            //必须确定这个数组在当前函数的调用栈中能够找到
+            if(0/*is local*/){
+                auto dst_addr = genMachineVReg();
+                auto fp = genMachineReg(11);
+                auto offset = genMachineOperand(operands[i]);
+                if(offset->isImm()) {
+                    auto val = ((ConstantSymbolEntry*)(operands[i]->getEntry()))->isInt() ? ((ConstantSymbolEntry*)(operands[i]->getEntry()))->getValueInt() : ((ConstantSymbolEntry*)(operands[i]->getEntry()))->getValueFloat();
+                    if(val > 255 || val < -255) {
+                        auto internal_reg = genMachineVReg();
+                        cur_inst = new LoadMInstruction(cur_block, internal_reg, offset);
+                        cur_block->InsertInst(cur_inst);
+                        offset = new MachineOperand(*internal_reg);
+                    }
+                }
+                cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD, dst_addr, fp, offset);
+                cur_block->InsertInst(cur_inst);
 
+                //左起前4个参数通过r0-r3传递
+                if(i<=4){
+                    auto dst = new MachineOperand(MachineOperand::REG, i-1);//r0-r3
+                    cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, dst_addr);
+                    cur_block->InsertInst(cur_inst);
+                }
+                else{
+                    additional_args.clear();
+                    additional_args.push_back(dst_addr);
+                    cur_inst = new StackMInstruction(cur_block, StackMInstruction::PUSH, additional_args);
+                    cur_block->InsertInst(cur_inst);
+                    saved_reg_cnt++;
+                }
+            }
+            else{
+                //左起前4个参数通过r0-r3传递
+                if(i<=4){
+                    auto dst = new MachineOperand(MachineOperand::REG, i-1);//r0-r3
+                    cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, genMachineOperand(operands[i]));
+                    cur_block->InsertInst(cur_inst);
+                }
+                else{
+                    // additional_args.push_back(genMachineOperand(operands[i]));
+                    additional_args.clear();
+                    additional_args.push_back(genMachineOperand(operands[i]));
+                    cur_inst = new StackMInstruction(cur_block, StackMInstruction::PUSH, additional_args);
+                    cur_block->InsertInst(cur_inst);
+                    saved_reg_cnt++;
+                }
+            }
+        }
+        else{
+            //左起前4个参数通过r0-r3传递
+            if(i<=4){
+                auto dst = new MachineOperand(MachineOperand::REG, i-1);//r0-r3
+                cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, genMachineOperand(operands[i]));
+                cur_block->InsertInst(cur_inst);
+            }
+            else{
+                additional_args.clear();
+                MachineOperand* operand = genMachineOperand(operands[i]);
+                if(operand->isImm()) {
+                    MachineOperand* internal_reg = genMachineVReg();
+                    cur_inst = new LoadMInstruction(cur_block, internal_reg, operand);
+                    cur_block->InsertInst(cur_inst);
+                    operand = new MachineOperand(*internal_reg);
+                }
+                additional_args.push_back(operand);
+                cur_inst = new StackMInstruction(cur_block, StackMInstruction::PUSH, additional_args);
+                cur_block->InsertInst(cur_inst);
+                saved_reg_cnt++;
+            }
+        }
+    }
+    cur_inst = new BranchMInstruction(cur_block, BranchMInstruction::BL, new MachineOperand(func->toAsmStr(), true));
+    cur_block->InsertInst(cur_inst);
+    // 对于有返回值的函数调用 需要提供一条从mov r0, dst的指令
+    if( ((FunctionType*)func->getType())->getRetType() != TypeSystem::voidType) {
+        auto dst = genMachineOperand(operands[0]);
+        auto src = new MachineOperand(MachineOperand::REG, 0);//r0
+        cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, src);
+        cur_block->InsertInst(cur_inst);
+    }
+    // 恢复栈帧 调整sp
+    if(saved_reg_cnt){
+        auto src1 = genMachineReg(13);
+        auto src2 = genMachineImm(saved_reg_cnt*4);
+        if(saved_reg_cnt*4 > 255 || saved_reg_cnt*4 < -255) {
+            auto internal_reg = genMachineVReg();
+            cur_inst = new LoadMInstruction(cur_block, internal_reg, src2);
+            cur_block->InsertInst(cur_inst);
+            src2 = new MachineOperand(*internal_reg);
+        }
+        auto dst = genMachineReg(13);
+        cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD, dst, src1, src2);
+        cur_block->InsertInst(cur_inst);
+    }
 }
 
 ZextInstruction::ZextInstruction(Operand *dst, Operand *src, BasicBlock *insert_bb) : Instruction(ZEXT, insert_bb)
@@ -475,7 +589,19 @@ void ZextInstruction::output() const
 }
 
 void ZextInstruction::genMachineCode(AsmBuilder* builder){
-
+    MachineBlock* cur_block = builder->getBlock();
+    MachineInstruction* cur_inst = nullptr;
+    MachineOperand* src = genMachineOperand(operands[1]);
+    if(src->isImm())
+    {
+        auto internal_reg = genMachineVReg();
+        cur_inst = new LoadMInstruction(cur_block, internal_reg, src);
+        cur_block->InsertInst(cur_inst);
+        src = new MachineOperand(*internal_reg);
+    }
+    MachineOperand* dst = genMachineOperand(operands[0]);
+    cur_inst = new ZextMInstruction(cur_block, dst, src);
+    cur_block->InsertInst(cur_inst);
 }
 
 void BitCastInstruction::output() const
@@ -548,7 +674,7 @@ MachineOperand* Instruction::genMachineOperand(Operand* ope)
     {
         auto id_se = dynamic_cast<IdentifierSymbolEntry*>(se);
         if(id_se->isGlobal())
-            mope = new MachineOperand(id_se->toStr().c_str());
+            mope = new MachineOperand(id_se->toAsmStr().c_str());
         else
             exit(0);
     }
@@ -849,4 +975,34 @@ void RetInstruction::genMachineCode(AsmBuilder* builder)
     * 1. Generate mov instruction to save return value in r0
     * 2. Restore callee saved registers and sp, fp
     * 3. Generate bx instruction */
+    auto cur_block = builder->getBlock();
+    MachineInstruction* cur_inst = nullptr;
+    //1. Generate mov instruction to save return value in r0
+    if(!operands.empty()){
+        if (operands[0]->getType()->isFloat()) {
+            auto src = genMachineOperand(operands[0]);
+            if(src->isImm()) {
+                auto internal_reg = genMachineVReg();
+                cur_inst = new LoadMInstruction(cur_block, internal_reg, src);
+                cur_block->InsertInst(cur_inst);
+                src = internal_reg;
+            }
+            auto dst = new MachineOperand(MachineOperand::REG, 16);
+        }
+        else {
+            auto src = genMachineOperand(operands[0]);
+            //立即数->寄存器
+            if(src->isImm())
+            {
+                auto internal_reg = genMachineVReg();
+                cur_inst = new LoadMInstruction(cur_block, internal_reg, src);
+                cur_block->InsertInst(cur_inst);
+                src = new MachineOperand(*internal_reg);
+            }
+            auto dst = new MachineOperand(MachineOperand::REG, 0);//r0
+            cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, src);
+            cur_block->InsertInst(cur_inst);
+        }
+    }
+
 }
