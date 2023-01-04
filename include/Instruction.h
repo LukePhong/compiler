@@ -71,6 +71,17 @@ public:
     void genMachineCode(AsmBuilder*);
 };
 
+class GetElementPtrInstruction : public LoadInstruction
+{
+public:
+    GetElementPtrInstruction(Operand *dst, Operand *src_addr, Operand * dim, BasicBlock *insert_bb = nullptr);
+    void output() const;
+private:
+    // IdentifierSymbolEntry* arrDef;
+    // std::vector<ExprNode*>& dimList;
+    Operand * dim;
+};
+
 class StoreInstruction : public Instruction
 {
 public:
@@ -172,6 +183,14 @@ public:
     void output() const;
     void genMachineCode(AsmBuilder*);
     enum {I2F, F2I};
+};
+
+class BitCastInstruction : public ZextInstruction
+{
+public:
+    BitCastInstruction(Operand *dst, Operand *src, BasicBlock *insert_bb = nullptr) : ZextInstruction(dst, src, insert_bb) {};
+    void output() const;
+    void genMachineCode(AsmBuilder*);
 };
 
 #endif

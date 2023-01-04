@@ -48,6 +48,8 @@ class ExprNode : public Node
 protected:
     SymbolEntry *symbolEntry;
     Operand *dst;   // The result of the subtree is stored into dst.    综合属性
+
+    bool isArrEle = false;
 public:
     ExprNode(SymbolEntry *symbolEntry) : symbolEntry(symbolEntry){};
     Operand* getOperand() {return dst;};
@@ -55,6 +57,7 @@ public:
 public:
     //获得符号表项
     SymbolEntry *getSymbolEntry(){return symbolEntry;}
+    bool isInArr() {return isArrEle;}
 };
 
 //q12函数调用
@@ -124,6 +127,7 @@ class DimArray : public StmtNode
 {
 private:
     std::vector<ExprNode*> dimList;
+    Operand *dst;
 public:
     DimArray(){};
     void addDim(ExprNode* next);
@@ -131,6 +135,8 @@ public:
     std::vector<ExprNode*>* getDimList() { return &dimList; };
     void typeCheck();
     void genCode();
+    void setDst(Operand *d) { dst = d; }
+    Operand *getDst() { return dst; }
 };
 
 //q9数组定义
@@ -161,10 +167,13 @@ private:
     DimArray* dim;
 public:
     //临时项、原始定义、维度
-    ArrayIndex(SymbolEntry *se, SymbolEntry *arr, DimArray* dim) : ExprNode(se) , arrDef(arr), dim(dim){};
+    ArrayIndex(SymbolEntry *se, SymbolEntry *arr, DimArray* dim) : ExprNode(se) , arrDef(arr), dim(dim)
+        {   SymbolEntry *temp = new TemporarySymbolEntry(se->getType(), SymbolTable::getLabel()); dst = new Operand(temp);
+            isArrEle = true;};
     void output(int level);
     void typeCheck();
     void genCode();
+    void genLvalCode();
 };
 
 

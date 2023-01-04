@@ -351,6 +351,34 @@ void LoadInstruction::output() const
     fprintf(yyout, "  %s = load %s, %s %s, align 4\n", dst.c_str(), dst_type.c_str(), src_type.c_str(), src.c_str());
 }
 
+//q13添加数组IR支持
+GetElementPtrInstruction::GetElementPtrInstruction(Operand *dst, Operand *src_addr, Operand * dim, BasicBlock *insert_bb) 
+    : LoadInstruction(dst, src_addr, insert_bb), dim(dim) 
+{
+    dim->addUse(this);
+}
+
+void GetElementPtrInstruction::output() const
+{
+    std::string dst = operands[0]->toStr();
+    std::string src = operands[1]->toStr();
+    std::string src_type;
+    std::string dst_type;
+    dst_type = operands[0]->getType()->toStr();
+    src_type = operands[1]->getType()->toStr();
+    //%7 = getelementptr inbounds [1 x i32], [1 x i32]* @aaa, i64 0, i64 0, align 4
+    fprintf(yyout, "  %s = getelementptr inbounds ", dst.c_str());
+    fprintf(yyout, "%s, %s %s, i64 0, ", src_type.substr(0, src_type.length() - 1).c_str(), src_type.c_str(), src.c_str());
+    // int cnt = 0;
+    // for (auto &&i : dimList)
+    // {
+        fprintf(yyout, "%s %s\n", dim->getType()->toStr().c_str(), dim->toStr().c_str());
+    //     cnt++;
+    //     if(cnt < dimList.size() - 1)
+    //         fprintf(yyout, ",");
+    // }
+}
+
 StoreInstruction::StoreInstruction(Operand *dst_addr, Operand *src, BasicBlock *insert_bb) : Instruction(STORE, insert_bb)
 {
     operands.push_back(dst_addr);
@@ -447,6 +475,19 @@ void ZextInstruction::output() const
 }
 
 void ZextInstruction::genMachineCode(AsmBuilder* builder){
+
+}
+
+void BitCastInstruction::output() const
+{
+    std::string dst = operands[0]->toStr();
+    std::string src = operands[1]->toStr();
+    std::string dst_type = operands[0]->getType()->toStr();
+    std::string src_type = operands[1]->getType()->toStr();
+    fprintf(yyout, "  %s = bitcast %s %s to %s\n", dst.c_str(), src_type.c_str(), src.c_str(), dst_type.c_str());
+}
+
+void BitCastInstruction::genMachineCode(AsmBuilder* builder){
 
 }
 

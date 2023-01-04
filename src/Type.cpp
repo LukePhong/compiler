@@ -4,7 +4,9 @@
 #include "Ast.h"
 
 IntType TypeSystem::commonInt = IntType(32);
-FloatType TypeSystem::commonFloat = FloatType(4);
+IntType TypeSystem::shortInt = IntType(8);
+IntType TypeSystem::longInt = IntType(64);
+FloatType TypeSystem::commonFloat = FloatType(32);
 VoidType TypeSystem::commonVoid = VoidType();
 BoolType TypeSystem::commonBool = BoolType(1);
 ArrayIntType TypeSystem::commonArrayInt = ArrayIntType(&commonInt);
@@ -12,6 +14,8 @@ ArrayFloatType TypeSystem::commonArrayFloat = ArrayFloatType(&commonFloat);
 FunctionType TypeSystem::commonFunc = FunctionType();
 
 Type* TypeSystem::intType = &commonInt;
+Type* TypeSystem::shortIntType = &shortInt;
+Type* TypeSystem::longIntType = &longInt;
 Type* TypeSystem::floatType = &commonFloat;
 Type* TypeSystem::voidType = &commonVoid;
 Type* TypeSystem::boolType = &commonBool;
@@ -21,7 +25,9 @@ Type* TypeSystem::funcType = &commonFunc;
 
 std::string IntType::toStr()
 {
-    return "i32";
+    std::stringstream ss;
+    ss<<"i"<<size;
+    return ss.str();
 }
 
 std::string ArrayIntType::toStr()
@@ -102,6 +108,37 @@ void ArrayType::genDimTypeStrings(){
         dimTypeStrArray.push_back(ss.str());
     }
     dimTypeStrArray.push_back(elementType->toStr());
+    
+}
+
+Type* ArrayType::getTrimType(){
+    if(trimedType)
+        return trimedType;
+
+    if(dimList.size()>1){
+        ArrayType* t;
+        if(elementType->isInt()){
+            t = new ArrayIntType((ArrayIntType*)this);
+        }else{
+            t = new ArrayFloatType((ArrayFloatType*)this);
+        }
+        t->cntEleNum /= ((ConstantSymbolEntry*)dimList[0]->getSymbolEntry())->getValueInt();
+        t->dimList.erase(t->dimList.begin());
+        t->dimTypeStrArray = this->dimTypeStrArray;
+        assert(!t->dimTypeStrArray.empty());
+        t->dimTypeStrArray.erase(t->dimTypeStrArray.begin());
+        trimedType = t;
+        return t;
+    }else{
+        Type* t;
+        if(elementType->isInt()){
+            t = new IntType(32);
+        }else{
+            t = new FloatType(32);
+        }
+        trimedType = t;
+        return t;
+    }
     
 }
 

@@ -58,6 +58,7 @@ private:
     Type *elementType;
     int cntEleNum;
     std::vector<std::string> dimTypeStrArray;
+    Type* trimedType = nullptr;
 public:
     //如果这里没有eleType的话，使用arrayIntType定义的数组再访问时如果访问到eleType将会是null
     ArrayType(Type::typeKind typeKind, Type *elementType) : Type(typeKind), elementType(elementType){};
@@ -65,18 +66,20 @@ public:
     virtual std::string toStr() = 0;
     size_t getDim() { return dimList.size(); };
     Type* getElementType() { return elementType; };
-    auto getDimList() { return dimList; }
+    std::vector<ExprNode*>& getDimList() { return dimList; }
     std::string getDimTypeStr(bool isInt);
     void countEleNum();
     int getCntEleNum() { return cntEleNum; }
     void genDimTypeStrings();
     auto getDimTypeStrings() { return dimTypeStrArray; }
+    Type* getTrimType();
 };
 
 class ArrayIntType : public ArrayType
 {
 public:
     ArrayIntType(Type *elementType) : ArrayType(Type::ARRAY_INT, elementType) {};
+    ArrayIntType(ArrayIntType* a) : ArrayType(Type::ARRAY_INT, a->getDimList(), a->getElementType()) {};
     ArrayIntType(std::vector<ExprNode*> dimList, Type *elementType) : ArrayType(Type::ARRAY_INT, dimList, elementType) {}; 
     std::string toStr();
     // Type* getElementType() { return  };
@@ -94,6 +97,7 @@ public:
 class ArrayFloatType : public ArrayType
 {
 public:
+    ArrayFloatType(ArrayFloatType* a) : ArrayType(Type::ARRAY_FLOAT, a->getDimList(), a->getElementType()) {};
     ArrayFloatType(Type *elementType) : ArrayType(Type::ARRAY_FLOAT, elementType) {};
     ArrayFloatType(std::vector<ExprNode*> dimList, Type *elementType) : ArrayType(Type::ARRAY_FLOAT, dimList, elementType){};
     std::string toStr();
@@ -136,6 +140,8 @@ class TypeSystem
 {
 private:
     static IntType commonInt;
+    static IntType shortInt;
+    static IntType longInt;
     static BoolType commonBool;
     static FloatType commonFloat;
     static VoidType commonVoid;
@@ -144,6 +150,8 @@ private:
     static FunctionType commonFunc;
 public:
     static Type *intType;
+    static Type *shortIntType;
+    static Type *longIntType;
     static Type *floatType;
     static Type *voidType;
     static Type *boolType;
