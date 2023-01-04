@@ -269,31 +269,31 @@ MovMInstruction::MovMInstruction(MachineBlock* p, int op,
 void MovMInstruction::output() 
 {
     //如何表示cond？
-    // switch (cond)
-    // {
-    // case EQ:
-    //     fprintf(yyout, "\tmoveq\t");
-    //     break;
-    // case NE:
-    //     fprintf(yyout, "\tmovne\t");
-    //     break;
-    // case LT:
-    //     fprintf(yyout, "\tmovlt\t");
-    //     break;
-    // case GT:
-    //     fprintf(yyout, "\tmovgt\t");
-    //     break;
-    // case LE:
-    //     fprintf(yyout, "\tmovle\t");
-    //     break;
-    // case GE:
-    //     fprintf(yyout, "\tmovge\t");
-    //     break;
-    // default:
-    //     fprintf(yyout, "\tmov\t");
-    //     break;
-    // }
-    fprintf(yyout, "\tmov ");
+    switch (cond)
+    {
+    case EQ:
+        fprintf(yyout, "\tmoveq\t");
+        break;
+    case NE:
+        fprintf(yyout, "\tmovne\t");
+        break;
+    case LT:
+        fprintf(yyout, "\tmovlt\t");
+        break;
+    case GT:
+        fprintf(yyout, "\tmovgt\t");
+        break;
+    case LE:
+        fprintf(yyout, "\tmovle\t");
+        break;
+    case GE:
+        fprintf(yyout, "\tmovge\t");
+        break;
+    default:
+        fprintf(yyout, "\tmov\t");
+        break;
+    }
+    // fprintf(yyout, "\tmov ");
     this->def_list[0]->output();
     fprintf(yyout, ", ");
     this->use_list[0]->output();
