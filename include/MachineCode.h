@@ -34,6 +34,7 @@ private:
     int reg_no; // register no
     std::string label; // address label
     bool isFunc;
+    bool isFlt = false;  // 判断是否浮点数
 public:
     enum { IMM, VREG, REG, LABEL };
     MachineOperand(int tp, int val);
@@ -46,6 +47,7 @@ public:
     bool isLabel() { return this->type == LABEL; };
     bool isOverFlowImm() { return this->type == IMM && (val > 255 || val <-255);}
     int getVal() {return this->val; };
+    bool isFloat() { return this->isFlt; }
     int getReg() {return this->reg_no; };
     void setReg(int regno) {this->type = REG; this->reg_no = regno;};
     std::string getLabel() {return this->label; };
@@ -95,18 +97,20 @@ public:
 class LoadMInstruction : public MachineInstruction
 {
 public:
+    enum opType{LDR, VLDR};
     LoadMInstruction(MachineBlock* p,
                     MachineOperand* dst, MachineOperand* src1, MachineOperand* src2 = nullptr, 
-                    int cond = MachineInstruction::NONE);
+                    int op = LDR, int cond = MachineInstruction::NONE);
     void output();
 };
 
 class StoreMInstruction : public MachineInstruction
 {
 public:
+    enum opType{STR, VSTR};
     StoreMInstruction(MachineBlock* p,
                     MachineOperand* src1, MachineOperand* src2, MachineOperand* src3 = nullptr, 
-                    int cond = MachineInstruction::NONE);
+                    int op = STR, int cond = MachineInstruction::NONE);
     void output();
 };
 
@@ -183,6 +187,8 @@ public:
     std::set<MachineOperand*>& getLiveOut() {return live_out;};
     std::vector<MachineBlock*>& getPreds() {return pred;};
     std::vector<MachineBlock*>& getSuccs() {return succ;};
+    void insertBefore(MachineInstruction* at, MachineInstruction* src);
+    void insertAfter(MachineInstruction* at, MachineInstruction* src);
     void output();
     int getBranchCond(){ return BranchCond; };
     void setBranchCond(int BCond){ this->BranchCond = BCond; };

@@ -139,11 +139,12 @@ void BinaryMInstruction::output()
         fprintf(yyout, "\tmul ");
         break;
     case BinaryMInstruction::DIV:
-        fprintf(yyout, "\tbl\t__aeabi_idiv\n");
+        // fprintf(yyout, "\tbl\t__aeabi_idiv\n");
+        fprintf(yyout, "\tsdiv ");
         break;
-    case BinaryMInstruction::MOD:
-        fprintf(yyout, "\tbl\t__aeabi_idivmod\n");
-        break;
+    // case BinaryMInstruction::MOD:
+    //     fprintf(yyout, "\tbl\t__aeabi_idivmod\n");
+    //     break;
     case BinaryMInstruction::AND:
         fprintf(yyout, "\tand ");
         break;
@@ -153,7 +154,7 @@ void BinaryMInstruction::output()
     default:
         break;
     }
-    if(op != DIV && op != MOD){
+    // if(op != DIV && op != MOD){
         this->PrintCond();
         this->def_list[0]->output();
         fprintf(yyout, ", ");
@@ -161,16 +162,16 @@ void BinaryMInstruction::output()
         fprintf(yyout, ", ");
         this->use_list[1]->output();
         fprintf(yyout, "\n");
-    }
+    // }
 }
 
 LoadMInstruction::LoadMInstruction(MachineBlock* p,
     MachineOperand* dst, MachineOperand* src1, MachineOperand* src2,
-    int cond)
+    int op, int cond)
 {
     this->parent = p;
     this->type = MachineInstruction::LOAD;
-    this->op = -1;
+    this->op = op;
     this->cond = cond;
     this->def_list.push_back(dst);
     this->use_list.push_back(src1);
@@ -213,12 +214,12 @@ void LoadMInstruction::output()
 
 StoreMInstruction::StoreMInstruction(MachineBlock* p,
     MachineOperand* src1, MachineOperand* src2, MachineOperand* src3, 
-    int cond)
+    int op, int cond)
 {
     //p1补全str指令的输出和生成
     this->parent = p;
     this->type = MachineInstruction::STORE;
-    this->op = -1;
+    this->op = op;
     this->cond = cond;
     this->use_list.push_back(src1);
     this->use_list.push_back(src2);
@@ -469,6 +470,23 @@ MachineFunction::MachineFunction(MachineUnit* p, SymbolEntry* sym_ptr)
     this->stack_size = 0;
 };
 
+void MachineBlock::insertBefore(MachineInstruction* at, MachineInstruction* src)
+{
+    std::vector<MachineInstruction*>::iterator pos = find(inst_list.begin(), inst_list.end(), at);
+    inst_list.insert(pos, src);
+}
+
+void MachineBlock::insertAfter(MachineInstruction* at, MachineInstruction* src)
+{
+    std::vector<MachineInstruction*>::iterator pos = find(inst_list.begin(), inst_list.end(), at);
+    // 如果是最后一条
+    if(pos == inst_list.end())
+        inst_list.push_back(src);
+    else
+        inst_list.insert(pos+1, src);
+}
+
+
 void MachineBlock::output()
 {
     fprintf(yyout, ".L%d:\n", this->no);
@@ -517,6 +535,7 @@ void MachineFunction::output()
     for(auto iter : block_list)
         iter->output();
 
+    fprintf(yyout, ".L%s_END:\n", func_name);
     if(stack_size!=0){
         if(stack_size > 255) {
             fprintf(yyout, "\tldr r4,=%d\n", stack_size);
@@ -528,14 +547,14 @@ void MachineFunction::output()
     }
     //恢复saved registers和fp
     fprintf(yyout, "\tpop {");
-    cnt = 0;
+    // cnt = 0;
     if(!saved_regs.empty()){
         for (auto &&i : saved_regs)
         {
             fprintf(yyout, "r%d", i);
-            if(cnt != saved_regs.size() - 1)
+            // if(cnt != saved_regs.size() - 1)
                 fprintf(yyout, ", ");
-            cnt++;
+            // cnt++;
         }
     }
     fprintf(yyout, "fp}\n");
