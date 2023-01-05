@@ -33,7 +33,7 @@ private:
     int val;  // value of immediate number
     int reg_no; // register no
     std::string label; // address label
-    bool isFunc;
+    bool isFuncLabel;
     bool isFlt = false;  // 判断是否浮点数
 public:
     enum { IMM, VREG, REG, LABEL };

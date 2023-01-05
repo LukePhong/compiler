@@ -107,6 +107,8 @@ private:
     bool isTemp = false;
     //q13添加数组IR支持
     std::string arrayDefStr = "zeroinitializer";
+    // 函数参数
+    int paramNumber = -1;
 
 public:
     bool isGlobal() const {return scope == GLOBAL;};
@@ -145,6 +147,8 @@ public:
     ConstantSymbolEntry* getGlbValue() { return glbValue; }
     void setArrDefStr(std::string s) { arrayDefStr = s;}
     std::string getArrDefStr() { return arrayDefStr; }
+    void setParamNumber(int p) { paramNumber = p; }
+    int getParamNumber() { return paramNumber; }
 };
 
 

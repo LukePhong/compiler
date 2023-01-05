@@ -11,7 +11,7 @@ MachineOperand::MachineOperand(int tp, int val)
         this->reg_no = val;
 }
 
-MachineOperand::MachineOperand(std::string label, bool isFunc) : isFunc(isFunc)
+MachineOperand::MachineOperand(std::string label, bool isFuncLabel) : isFuncLabel(isFuncLabel)
 {
     this->type = MachineOperand::LABEL;
     this->label = label;
@@ -45,6 +45,7 @@ bool MachineOperand::operator<(const MachineOperand&a) const
 
 void MachineOperand::PrintReg()
 {
+    // 特殊寄存器
     switch (reg_no)
     {
     case 11:
@@ -84,7 +85,7 @@ void MachineOperand::output()
         PrintReg();
         break;
     case LABEL:
-        if (this->label.substr(0, 2) == ".L" || isFunc)
+        if (this->label.substr(0, 2) == ".L" || isFuncLabel)
             fprintf(yyout, "%s", this->label.c_str());
         else
             fprintf(yyout, "addr_%s", this->label.c_str());
@@ -508,7 +509,7 @@ void MachineFunction::output()
     *  2. fp = sp
     *  3. Save callee saved register
     *  4. Allocate stack space for local variable */
-    fprintf(yyout, "\tpush {fp}\n");
+    fprintf(yyout, "\tpush {fp, lr}\n");
     fprintf(yyout, "\tmov fp, sp\n");
     size_t cnt = 0;
     if(!saved_regs.empty()){
@@ -557,7 +558,7 @@ void MachineFunction::output()
             // cnt++;
         }
     }
-    fprintf(yyout, "fp}\n");
+    fprintf(yyout, "fp, lr}\n");
     // 3. Generate bx instruction
     fprintf(yyout, "\tbx lr\n\n");
 }

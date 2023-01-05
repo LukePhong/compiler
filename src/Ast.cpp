@@ -35,6 +35,7 @@ struct flags{
     std::vector<ExprNode*>::iterator dimListIter;
     bool isOuterArrDecl = false;
     
+    int cntParam = 0;
 } flag;
 
 //q13添加数组IR支持
@@ -570,12 +571,16 @@ void DeclStmt::genCode()
             }
             if(se->isParam()){
                 //形参需要一个label用于传参时写入
-                addr_se = new TemporarySymbolEntry(se->getType(), SymbolTable::getLabel());
+                // addr_se = new TemporarySymbolEntry(se->getType(), flag.cntParam);
+                // addr_se = new IdentifierSymbolEntry(*se);
+                // ((IdentifierSymbolEntry*)addr_se)->setParamNumber(flag.cntParam);
+                se->setParamNumber(flag.cntParam);
                 //形参label（变量保存位置）
-                func->addLabelParam(((TemporarySymbolEntry*)addr_se)->getLabel());
+                // func->addLabelParam(((TemporarySymbolEntry*)addr_se)->getLabel());
+                func->addLabelParam(flag.cntParam);
                 //另一个label，分配一片空间
                 auto tempPtr = new TemporarySymbolEntry(type, SymbolTable::getLabel());
-                auto srcParam = new Operand(addr_se);
+                auto srcParam = new Operand(se);
                 addr = new Operand(tempPtr); 
                 //把形参的值存入另一个label指向的空间中
                 new StoreInstruction(addr, srcParam, bb);
@@ -1033,7 +1038,9 @@ void FuncParam::genCode() {
     for (auto &&i : paramList)
     {
         i->genCode();
+        flag.cntParam++;
     }
+    flag.cntParam = 0;
 }
 
 /*---------------------------TYPE CHECK----------------------------------------*/
