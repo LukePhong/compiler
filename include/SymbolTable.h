@@ -60,7 +60,7 @@ public:
     ConstantSymbolEntry(Type *type, float value);
     virtual ~ConstantSymbolEntry() {};
     // void* getValue() const {return (void*)(isInt ? value_int : value_float);};
-    bool isInt() { return type->isInt(); };
+    bool isInt() { return type->isInt() || type->isBool(); };
     int getValueInt() const;
     float getValueFloat() const;
     std::string toStr();

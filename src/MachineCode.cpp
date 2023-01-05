@@ -5,8 +5,9 @@ extern FILE* yyout;
 MachineOperand::MachineOperand(int tp, int val)
 {
     this->type = tp;
-    if(tp == MachineOperand::IMM)
+    if(tp == MachineOperand::IMM){
         this->val = val;
+    }
     else 
         this->reg_no = val;
 }

@@ -547,10 +547,13 @@ MachineOperand* Instruction::genMachineOperand(Operand* ope)
     //TODO: 全局常量可能需要调整
     auto se = ope->getEntry();
     MachineOperand* mope = nullptr;
-    if(se->isConstant() && se->getType()->isNumber())
-        mope = new MachineOperand(MachineOperand::IMM, 
-            ((ConstantSymbolEntry*)se)->isInt() ? dynamic_cast<ConstantSymbolEntry*>(se)->getValueInt() : dynamic_cast<ConstantSymbolEntry*>(se)->getValueFloat());
-    else if(se->isTemporary())
+    if(se->isConstant() && se->getType()->isNumber()){
+        // 当心精度损失！！！
+        if(((ConstantSymbolEntry*)se)->isInt())
+            mope = new MachineOperand(MachineOperand::IMM, dynamic_cast<ConstantSymbolEntry*>(se)->getValueInt());
+        else
+            mope = new MachineOperand(MachineOperand::IMM, dynamic_cast<ConstantSymbolEntry*>(se)->getValueFloat());
+    }else if(se->isTemporary())
         mope = new MachineOperand(MachineOperand::VREG, dynamic_cast<TemporarySymbolEntry*>(se)->getLabel());
     else if(se->isVariable() || (se->isConstant() && !se->getType()->isNumber()))
     {
@@ -665,7 +668,9 @@ void StoreInstruction::genMachineCode(AsmBuilder* builder)
         cur_inst = new StoreMInstruction(cur_block, src, internal_reg2);
         cur_block->InsertInst(cur_inst);
     }
-    else if(((IdentifierSymbolEntry*)(operands[1]->getEntry()))->isParam()){
+    // Load function params 该分支必须位于local operand之下，isParam()可能不准确，导致两个分支同时成立
+    else if(!operands[1]->getEntry()->isTemporary() && !operands[1]->getEntry()->isConstant()
+         && ((IdentifierSymbolEntry*)(operands[1]->getEntry()))->isParam()){
         auto se = ((IdentifierSymbolEntry*)(operands[1]->getEntry()));
         if(se->getParamNumber() <4){
             auto src = genMachineReg(se->getParamNumber());
@@ -827,35 +832,35 @@ void CmpInstruction::genMachineCode(AsmBuilder* builder)
 
     //是否需要？
     // //将比较结果存储到dst中，设置两条条件mov语句，给定条件相反，只有一条执行
-    // auto dst = genMachineOperand(operands[0]);
-    // auto trueResult = genMachineImm(1);
-    // auto falseResult = genMachineImm(0);
-    // cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, trueResult, opcode);
-    // cur_block->InsertInst(cur_inst);
-    // switch (opcode)
-    // {
-    // case CmpInstruction::E:
-    //     cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, falseResult, CmpInstruction::NE);
-    //     break;
-    // case CmpInstruction::NE:
-    //     cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, falseResult, CmpInstruction::E);
-    //     break;
-    // case CmpInstruction::G:
-    //     cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, falseResult, CmpInstruction::LE);
-    //     break;
-    // case CmpInstruction::L:
-    //     cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, falseResult, CmpInstruction::GE);
-    //     break;
-    // case CmpInstruction::GE:
-    //     cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, falseResult, CmpInstruction::L);
-    //     break;
-    // case CmpInstruction::LE:
-    //     cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, falseResult, CmpInstruction::G);
-    //     break;
-    // default:
-    //     break;
-    // }
-    // cur_block->InsertInst(cur_inst);
+    auto dst = genMachineOperand(operands[0]);
+    auto trueResult = genMachineImm(1);
+    auto falseResult = genMachineImm(0);
+    cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, trueResult, opcode);
+    cur_block->InsertInst(cur_inst);
+    switch (opcode)
+    {
+    case CmpInstruction::E:
+        cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, falseResult, CmpInstruction::NE);
+        break;
+    case CmpInstruction::NE:
+        cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, falseResult, CmpInstruction::E);
+        break;
+    case CmpInstruction::G:
+        cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, falseResult, CmpInstruction::LE);
+        break;
+    case CmpInstruction::L:
+        cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, falseResult, CmpInstruction::GE);
+        break;
+    case CmpInstruction::GE:
+        cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, falseResult, CmpInstruction::L);
+        break;
+    case CmpInstruction::LE:
+        cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, falseResult, CmpInstruction::G);
+        break;
+    default:
+        break;
+    }
+    cur_block->InsertInst(cur_inst);
 }
 
 void UncondBrInstruction::genMachineCode(AsmBuilder* builder)

@@ -882,6 +882,8 @@ FuncDef
         $$ = new FunctionDef(se, $5, $8);
         SymbolTable *top = identifiers;
         identifiers = identifiers->getPrev();
+        // identifiers = identifiers->getPrev();
+
         std::vector<Type*>().swap(tempParaType); 
         delete top;
         delete []$2;
@@ -960,6 +962,7 @@ FuncParam
         delete []$4;
     }
     |Type ID{ 
+
         //新增符号表项
         SymbolEntry *se;
         auto n = new DeclStmt();
@@ -976,6 +979,7 @@ FuncParam
     //q11参数列表数组支持
     //一维
     |Type ID LSQUARE RSQUARE { 
+
         //新增符号表项
         SymbolEntry *se;
         auto n = new DeclStmt();
@@ -996,6 +1000,7 @@ FuncParam
     }
     //多维
     |Type ID LSQUARE RSQUARE DimArray { 
+
         //新增符号表项
         SymbolEntry *se;
         auto n = new DeclStmt();
