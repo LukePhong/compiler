@@ -40,7 +40,12 @@ void Function::output() const
     if(!((FunctionType*)sym_ptr->getType())->getParamsType()[0]->isVoid()){
         for (auto &&i : ((FunctionType*)sym_ptr->getType())->getParamsType())
         {
-            fprintf(yyout, "%s %%t%d", i->toStr().c_str(), labelParam[cnt]);
+            if(i->isArrayType()){
+                auto p = new PointerType(((ArrayType*)i)->getElementType());
+                fprintf(yyout, "%s %%t%d", p->toStr().c_str(), labelParam[cnt]);
+            }
+            else
+                fprintf(yyout, "%s %%t%d", i->toStr().c_str(), labelParam[cnt]);
             if(cnt != ((FunctionType*)sym_ptr->getType())->getParamsType().size() - 1)
                 fprintf(yyout, ",");
             cnt++;

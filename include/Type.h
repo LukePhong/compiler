@@ -31,7 +31,8 @@ public:
     //判断是否是数字类型
     bool isNumber() { return kind < 3; };
     //p4二元运算类型检查
-    bool isArrayType() { return kind > FUNC; }
+    bool isArrayType() { return kind == ARRAY_INT || kind == ARRAY_FLOAT; }
+    bool isPtrType() { return kind == PTR; }
 };
 
 class IntType : public Type
@@ -50,6 +51,8 @@ private:
 public:
     PointerType(Type* valueType) : Type(Type::PTR) {this->valueType = valueType;};
     std::string toStr();
+    bool isMultiPtr() { return valueType->isPtrType(); }
+    Type *getValueType() { return valueType; }
 };
 
 class ArrayType : public Type{

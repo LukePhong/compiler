@@ -629,13 +629,20 @@ void DeclStmt::genCode()
             Instruction *alloca;
             SymbolEntry *addr_se;
             Type *type;
-            type = new PointerType(se->getType());
+            
             if(se->isLocal()){
+                type = new PointerType(se->getType());
                 //普通局部变量，只需要一个新的label，分配一个空间即可
                 addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
                 addr = new Operand(addr_se); 
+                alloca = new AllocaInstruction(addr, se);                   // allocate space for local id in function stack.
             }
             if(se->isParam()){
+                auto seType = se->getType();
+                if(seType->isArrayType()){
+                    seType = new PointerType(((ArrayType*)seType)->getElementType());
+                }
+                type = new PointerType(seType);
                 //形参需要一个label用于传参时写入
                 // addr_se = new TemporarySymbolEntry(se->getType(), flag.cntParam);
                 // addr_se = new IdentifierSymbolEntry(*se);
@@ -646,12 +653,20 @@ void DeclStmt::genCode()
                 func->addLabelParam(flag.cntParam);
                 //另一个label，分配一片空间
                 auto tempPtr = new TemporarySymbolEntry(type, SymbolTable::getLabel());
-                auto srcParam = new Operand(se);
                 addr = new Operand(tempPtr); 
+                Operand* srcParam;
+                if(se->getType()->isArrayType()){
+                    auto seTarget = new IdentifierSymbolEntry(*se);
+                    seTarget->setType(seType);
+                    srcParam = new Operand(seTarget);
+                    alloca = new AllocaInstruction(addr, seTarget);
+                }else{
+                    srcParam = new Operand(se);
+                    alloca = new AllocaInstruction(addr, se);
+                }
                 //把形参的值存入另一个label指向的空间中
                 new StoreInstruction(addr, srcParam, bb);
             }
-            alloca = new AllocaInstruction(addr, se);                   // allocate space for local id in function stack.
             entry->insertFront(alloca);                                 // allocate instructions should be inserted into the begin of the entry block.
             se->setAddr(addr);                                          // set the addr operand in symbol entry so that we can use it in subsequent code generation.
 
@@ -848,7 +863,21 @@ void DimArray::genCode() {
     for (size_t i = 0; i < dimList.size(); i++)
     {
         dimList[i]->genCode();
-        new GetElementPtrInstruction(addr, i == 0 ? flag.arrayIdStk.top()->getAddr() : lastAddr, dimList[i]->getOperand(), bb);
+        if(i==0){
+            auto p = flag.arrayIdStk.top()->getAddr();
+            Operand* target;
+            auto pType = ((PointerType*)p->getType());
+            if(pType->isMultiPtr()){
+                auto pTempSe = new TemporarySymbolEntry(pType->getValueType(), SymbolTable::getLabel());
+                target = new Operand(pTempSe); 
+                new LoadInstruction(target, p, bb);
+            }else{
+                target = p;
+            }
+            new GetElementPtrInstruction(addr, target, dimList[i]->getOperand(), bb);
+        }else{
+            new GetElementPtrInstruction(addr, lastAddr, dimList[i]->getOperand(), bb);
+        }
         lastAddr = addr;
         if(i == dimList.size() - 1){
             dst = lastAddr;

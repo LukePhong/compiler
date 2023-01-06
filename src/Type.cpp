@@ -162,6 +162,10 @@ std::string FunctionType::toStr()
 std::string PointerType::toStr()
 {
     std::ostringstream buffer;
-    buffer << valueType->toStr() << "*";
+    // TODO: 更高维度的数组可能有问题？
+    // if(valueType->isArrayType())
+    //     buffer << ((ArrayType*)valueType)->getElementType()->toStr() << "*";
+    // else
+        buffer << valueType->toStr() << "*";
     return buffer.str();
 }

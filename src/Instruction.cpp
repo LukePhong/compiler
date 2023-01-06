@@ -368,15 +368,11 @@ void GetElementPtrInstruction::output() const
     src_type = operands[1]->getType()->toStr();
     //%7 = getelementptr inbounds [1 x i32], [1 x i32]* @aaa, i64 0, i64 0, align 4
     fprintf(yyout, "  %s = getelementptr inbounds ", dst.c_str());
-    fprintf(yyout, "%s, %s %s, i64 0, ", src_type.substr(0, src_type.length() - 1).c_str(), src_type.c_str(), src.c_str());
-    // int cnt = 0;
-    // for (auto &&i : dimList)
-    // {
-        fprintf(yyout, "%s %s\n", dim->getType()->toStr().c_str(), dim->toStr().c_str());
-    //     cnt++;
-    //     if(cnt < dimList.size() - 1)
-    //         fprintf(yyout, ",");
-    // }
+    if(dim->getEntry()->isConstant())
+        fprintf(yyout, "%s, %s %s, i64 0, ", src_type.substr(0, src_type.length() - 1).c_str(), src_type.c_str(), src.c_str());
+    else
+        fprintf(yyout, "%s, %s %s, ", src_type.substr(0, src_type.length() - 1).c_str(), src_type.c_str(), src.c_str());
+    fprintf(yyout, "%s %s\n", dim->getType()->toStr().c_str(), dim->toStr().c_str());
 }
 
 StoreInstruction::StoreInstruction(Operand *dst_addr, Operand *src, BasicBlock *insert_bb) : Instruction(STORE, insert_bb)
