@@ -601,7 +601,11 @@ void DeclStmt::genCode()
             se->setAddr(addr);
             //q6在全局区添加系统函数声明和全局变量
             if(exprList[cnt]){
-                exprList[cnt]->genCode();
+                // 运算出现在全局区
+                if(bb){
+                    // continue;    
+                    exprList[cnt]->genCode();
+                }
                 se->setGlbConst(exprList[cnt]->getSymbolEntry());
             }else if(defArrList[cnt]){
                 //q13添加数组IR支持

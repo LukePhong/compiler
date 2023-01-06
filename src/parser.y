@@ -391,8 +391,13 @@ AddExp
         int k1 = $1->getSymbolEntry()->getType()->getKind(),k2 = $3->getSymbolEntry()->getType()->getKind();
         if($1->getSymbolEntry()->isConstant() && $3->getSymbolEntry()->isConstant()){
             ConstantSymbolEntry *temp1 = (ConstantSymbolEntry*)($1->getSymbolEntry()), *temp2 = (ConstantSymbolEntry*)($3->getSymbolEntry());
-            se = new ConstantSymbolEntry( k1 >= k2 ? temp1->getType() : temp2->getType(),
-            (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) + (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
+            // se = new ConstantSymbolEntry( k1 >= k2 ? temp1->getType() : temp2->getType(),
+            // (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) + (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
+            if(temp1->isInt() && temp2->isInt()){
+                se = new ConstantSymbolEntry(TypeSystem::intType, temp1->getValueInt() + temp2->getValueInt());
+            }else{
+                se = new ConstantSymbolEntry(TypeSystem::floatType, (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) + (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
+            }
         } else{
             se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
         }
@@ -406,8 +411,13 @@ AddExp
         int k1 = $1->getSymbolEntry()->getType()->getKind(),k2 = $3->getSymbolEntry()->getType()->getKind();
         if($1->getSymbolEntry()->isConstant() && $3->getSymbolEntry()->isConstant()){
             ConstantSymbolEntry *temp1 = (ConstantSymbolEntry*)($1->getSymbolEntry()), *temp2 = (ConstantSymbolEntry*)($3->getSymbolEntry());
-            se = new ConstantSymbolEntry( k1 >= k2 ? temp1->getType() : temp2->getType(),
-            (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) - (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
+            // se = new ConstantSymbolEntry( k1 >= k2 ? temp1->getType() : temp2->getType(),
+            // (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) - (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
+            if(temp1->isInt() && temp2->isInt()){
+                se = new ConstantSymbolEntry(TypeSystem::intType, temp1->getValueInt() - temp2->getValueInt());
+            }else{
+                se = new ConstantSymbolEntry(TypeSystem::floatType, (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) - (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
+            }
         } else{
             se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
         }
@@ -426,8 +436,13 @@ MulExp
         int k1 = $1->getSymbolEntry()->getType()->getKind(),k2 = $3->getSymbolEntry()->getType()->getKind();
         if($1->getSymbolEntry()->isConstant() && $3->getSymbolEntry()->isConstant()){
             ConstantSymbolEntry *temp1 = (ConstantSymbolEntry*)($1->getSymbolEntry()), *temp2 = (ConstantSymbolEntry*)($3->getSymbolEntry());
-            se = new ConstantSymbolEntry( k1 >= k2 ? temp1->getType() : temp2->getType(),
-            (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) * (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
+            // se = new ConstantSymbolEntry( k1 >= k2 ? temp1->getType() : temp2->getType(),
+            // (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) * (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
+            if(temp1->isInt() && temp2->isInt()){
+                se = new ConstantSymbolEntry(TypeSystem::intType, temp1->getValueInt() * temp2->getValueInt());
+            }else{
+                se = new ConstantSymbolEntry(TypeSystem::floatType, (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) * (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
+            }
         } else{
             se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
         }
@@ -440,8 +455,13 @@ MulExp
         int k1 = $1->getSymbolEntry()->getType()->getKind(),k2 = $3->getSymbolEntry()->getType()->getKind();
         if($1->getSymbolEntry()->isConstant() && $3->getSymbolEntry()->isConstant()){
             ConstantSymbolEntry *temp1 = (ConstantSymbolEntry*)($1->getSymbolEntry()), *temp2 = (ConstantSymbolEntry*)($3->getSymbolEntry());
-            se = new ConstantSymbolEntry( k1 >= k2 ? temp1->getType() : temp2->getType(),
-            (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) / (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
+            // se = new ConstantSymbolEntry( k1 >= k2 ? temp1->getType() : temp2->getType(),
+            // (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) / (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
+            if(temp1->isInt() && temp2->isInt()){
+                se = new ConstantSymbolEntry(TypeSystem::intType, temp1->getValueInt() / temp2->getValueInt());
+            }else{
+                se = new ConstantSymbolEntry(TypeSystem::floatType, (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) / (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
+            }
         } else{
             se = new TemporarySymbolEntry( k1 >= k2 ? $1->getSymbolEntry()->getType() : $3->getSymbolEntry()->getType() , SymbolTable::getLabel());
         }
@@ -480,8 +500,14 @@ UnaryExp
         SymbolEntry *se;
         //p11计算常量数值
         if($2->getSymbolEntry()->isConstant()){
-            se = new ConstantSymbolEntry($2->getSymbolEntry()->getType(), 
-                -(((ConstantSymbolEntry*)($2->getSymbolEntry()))->isInt() ? ((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueInt() : ((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueFloat()));
+            // 因为所有的？：运算符都会导致类型的错误，所以要全部进行更改
+            if(((ConstantSymbolEntry*)($2->getSymbolEntry()))->isInt()){
+                se = new ConstantSymbolEntry($2->getSymbolEntry()->getType(), -((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueInt());
+            }else{
+                se = new ConstantSymbolEntry($2->getSymbolEntry()->getType(), -((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueFloat());
+            }
+            // se = new ConstantSymbolEntry($2->getSymbolEntry()->getType(), 
+            //     -(((ConstantSymbolEntry*)($2->getSymbolEntry()))->isInt() ? ((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueInt() : ((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueFloat()));
         }else{
             // if($2->getSymbolEntry()->getType()->isInt())
             //     se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
@@ -501,8 +527,13 @@ UnaryExp
         //q6浮点数支持
         SymbolEntry *se;
         if($2->getSymbolEntry()->isConstant()){
-            se = new ConstantSymbolEntry($2->getSymbolEntry()->getType(), 
-                !(((ConstantSymbolEntry*)($2->getSymbolEntry()))->isInt()? ((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueInt() : ((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueFloat()));
+            // se = new ConstantSymbolEntry($2->getSymbolEntry()->getType(), 
+            //     !(((ConstantSymbolEntry*)($2->getSymbolEntry()))->isInt()? ((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueInt() : ((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueFloat()));
+            if(((ConstantSymbolEntry*)($2->getSymbolEntry()))->isInt()){
+                se = new ConstantSymbolEntry($2->getSymbolEntry()->getType(), !((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueInt());
+            }else{
+                se = new ConstantSymbolEntry($2->getSymbolEntry()->getType(), !((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueFloat());
+            }
         }else{
             se = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
         }
