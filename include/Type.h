@@ -58,7 +58,7 @@ private:
     Type *elementType;
     int cntEleNum;
     std::vector<std::string> dimTypeStrArray;
-    Type* trimedType = nullptr;
+    Type* trimedType = nullptr;     //如果顺利，这个指针将构成一条链，将从中找到所有的数组类型
 public:
     //如果这里没有eleType的话，使用arrayIntType定义的数组再访问时如果访问到eleType将会是null
     ArrayType(Type::typeKind typeKind, Type *elementType) : Type(typeKind), elementType(elementType){};

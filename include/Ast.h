@@ -146,6 +146,7 @@ private:
     std::vector<ArrayDef*> arrDefList;
     //使用叶节点来保存Expr指针
     ExprNode* expr = nullptr;
+    std::vector<Operand*> arrDstVec;
 public:
     ArrayDef(){};
     void addDef(ArrayDef* def);
@@ -157,6 +158,9 @@ public:
     void genCode();
     bool isAllDefined(int& cnt);
     // void getArrayDefStr(int idx);
+    void addArrDst(Operand* d) { arrDstVec.push_back(d); }
+    std::vector<Operand*>& getArrDst() { return arrDstVec; }
+    void getArrayDefCode(int idx, Operand* defOp, Type* toTrim, bool checkTop = false);
 };
 
 //q14数组取值

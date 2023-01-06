@@ -110,6 +110,8 @@ std::string IdentifierSymbolEntry::toStr()
 {
     if(isParam())
         return "%t" + std::to_string(paramNumber);
+    if(!nameOfFunc.empty())
+        return nameOfFunc + "." + name;
     return "@" + name;
 }
 
@@ -123,10 +125,13 @@ void IdentifierSymbolEntry::outputGlbId()
     // assert(isGlobal() && (type->isNumber() || type->isArrayType()));
 
     auto t = this->type->toStr();
-    if(isConstant()){
+    if(!isGlobal() && (isConstant() || type->isArrayType())){
         t = "constant " + t;
-    }else{
+    }
+    if(isGlobal()){
         t = "global " + t;
+    }else if(type->isArrayType()){
+        t = "private " + t;
     }
 
     if(type->isInt()) {
@@ -154,7 +159,10 @@ void IdentifierSymbolEntry::outputGlbId()
             fprintf(yyout, "@%s = %s 0.000000e+00, align 4 \n",this->name.c_str(), t.c_str());
         }
     }else if(type->isArrayType()){
-        fprintf(yyout, "@%s = %s %s, align 16 \n", this->name.c_str(), t.c_str(), arrayDefStr.c_str());
+        if(nameOfFunc.empty())
+            fprintf(yyout, "@%s = %s %s, align 16 \n", this->name.c_str(), t.c_str(), arrayDefStr.c_str());
+        else
+            fprintf(yyout, "%s.%s = %s %s, align 16 \n", nameOfFunc.c_str(), this->name.c_str(), t.c_str(), arrayDefStr.c_str());
     }
 }
 

@@ -105,8 +105,13 @@ private:
     ConstantSymbolEntry* glbValue = nullptr;
     //避免连续声明ID时因为插入临时符号表项导致类型检查时出现 重复定义 错误
     bool isTemp = false;
+    
     //q13添加数组IR支持
     std::string arrayDefStr = "zeroinitializer";
+    std::vector<ExprNode*> arrExprVec;  // 按行存储的expr列表
+    std::string nameOfFunc = "";
+
+    
     // 函数参数
     int paramNumber = -1;
 
@@ -149,6 +154,10 @@ public:
     std::string getArrDefStr() { return arrayDefStr; }
     void setParamNumber(int p) { paramNumber = p; }
     int getParamNumber() { return paramNumber; }
+    void addArrExpr(ExprNode* e) { arrExprVec.push_back(e); }
+    std::vector<ExprNode*> getArrExpr() { return arrExprVec; }
+    void setNameOfFunc(std::string s) { nameOfFunc = s; }
+
 };
 
 

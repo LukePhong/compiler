@@ -156,8 +156,8 @@ int main(int argc, char *argv[])
 
     tempParaType[1] = new PointerType(TypeSystem::shortIntType);
     auto funcType13 = new FunctionType(TypeSystem::voidType, tempParaType);
-    auto id13 = new IdentifierSymbolEntry(funcType13, "llvm.memset.p0i8.p0i8.i64", 0);
-    identifiers->installFunc("llvm.memset.p0i8.p0i8.i64", id13);
+    auto id13 = new IdentifierSymbolEntry(funcType13, "llvm.memcpy.p0i8.p0i8.i64", 0);
+    identifiers->installFunc("llvm.memcpy.p0i8.p0i8.i64", id13);
     unit.getSysFuncs().push_back(id13);
     //TODO: putf
 
