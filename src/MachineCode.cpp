@@ -568,7 +568,8 @@ void MachineUnit::PrintGlobalDecl()
 {
     // TODO:
     // You need to print global variable/const declarition code;
-    fprintf(yyout, "\t.data\n");
+    if(!unit->getGlbIds().empty())
+        fprintf(yyout, "\t.data\n");
     for(IdentifierSymbolEntry* var : unit->getGlbIds()) {
         if(var->getType()->isArrayType()) {
             if(((ArrayType*)var->getType())->getCntEleNum() == 0) {
@@ -622,6 +623,7 @@ void MachineUnit::output()
     fprintf(yyout, "\t.fpu vfpv3-d16\n");
     fprintf(yyout, "\t.arch_extension crc\n");
     PrintGlobalDecl();
+    fprintf(yyout, "\t.text\n");
     for(auto iter : func_list)
         iter->output();
     PrintBridges();
