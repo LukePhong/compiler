@@ -108,7 +108,14 @@ bool IdentifierSymbolEntry::paramListMarch(std::vector<Type*> typeList){
 
 std::string IdentifierSymbolEntry::toStr()
 {
+    if(isParam())
+        return "%t" + std::to_string(paramNumber);
     return "@" + name;
+}
+
+std::string IdentifierSymbolEntry::toAsmStr()
+{
+    return name;
 }
 
 void IdentifierSymbolEntry::outputGlbId()

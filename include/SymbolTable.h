@@ -60,7 +60,7 @@ public:
     ConstantSymbolEntry(Type *type, float value);
     virtual ~ConstantSymbolEntry() {};
     // void* getValue() const {return (void*)(isInt ? value_int : value_float);};
-    bool isInt() { return type->isInt(); };
+    bool isInt() { return type->isInt() || type->isBool(); };
     int getValueInt() const;
     float getValueFloat() const;
     std::string toStr();
@@ -107,6 +107,8 @@ private:
     bool isTemp = false;
     //q13添加数组IR支持
     std::string arrayDefStr = "zeroinitializer";
+    // 函数参数
+    int paramNumber = -1;
 
 public:
     bool isGlobal() const {return scope == GLOBAL;};
@@ -126,6 +128,7 @@ public:
     // IdentifierSymbolEntry(Type *type, std::string name, int scope, int value);
     virtual ~IdentifierSymbolEntry() {};
     std::string toStr();
+    std::string toAsmStr();
     int getScope() const {return scope;};
     // You can add any function you need here.
     bool paramListMarch(std::vector<Type*> typeList);
@@ -141,8 +144,11 @@ public:
         else
             glbValue = new ConstantSymbolEntry(type, cst->getValueFloat());
     }
+    ConstantSymbolEntry* getGlbValue() { return glbValue; }
     void setArrDefStr(std::string s) { arrayDefStr = s;}
     std::string getArrDefStr() { return arrayDefStr; }
+    void setParamNumber(int p) { paramNumber = p; }
+    int getParamNumber() { return paramNumber; }
 };
 
 

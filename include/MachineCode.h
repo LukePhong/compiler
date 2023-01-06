@@ -23,6 +23,8 @@ class MachineFunction;
 class MachineBlock;
 class MachineInstruction;
 
+class Unit;
+
 class MachineOperand
 {
 private:
@@ -31,10 +33,12 @@ private:
     int val;  // value of immediate number
     int reg_no; // register no
     std::string label; // address label
+    bool isFuncLabel;
+    bool isFlt = false;  // 判断是否浮点数
 public:
     enum { IMM, VREG, REG, LABEL };
     MachineOperand(int tp, int val);
-    MachineOperand(std::string label);
+    MachineOperand(std::string label, bool isFunc = false);
     bool operator == (const MachineOperand&) const;
     bool operator < (const MachineOperand&) const;
     bool isImm() { return this->type == IMM; }; 
@@ -43,6 +47,7 @@ public:
     bool isLabel() { return this->type == LABEL; };
     bool isOverFlowImm() { return this->type == IMM && (val > 255 || val <-255);}
     int getVal() {return this->val; };
+    bool isFloat() { return this->isFlt; }
     int getReg() {return this->reg_no; };
     void setReg(int regno) {this->type = REG; this->reg_no = regno;};
     std::string getLabel() {return this->label; };
@@ -67,7 +72,7 @@ protected:
     void addUse(MachineOperand* ope) { use_list.push_back(ope); };
     // Print execution code after printing opcode
     void PrintCond();
-    enum instType { BINARY, LOAD, STORE, MOV, BRANCH, CMP, STACK };
+    enum instType { BINARY, LOAD, STORE, MOV, BRANCH, CMP, STACK, ZEXT};
 public:
     enum condType { EQ, NE, LT, LE , GT, GE, NONE };
     virtual void output() = 0;
@@ -92,18 +97,20 @@ public:
 class LoadMInstruction : public MachineInstruction
 {
 public:
+    enum opType{LDR, VLDR};
     LoadMInstruction(MachineBlock* p,
                     MachineOperand* dst, MachineOperand* src1, MachineOperand* src2 = nullptr, 
-                    int cond = MachineInstruction::NONE);
+                    int op = LDR, int cond = MachineInstruction::NONE);
     void output();
 };
 
 class StoreMInstruction : public MachineInstruction
 {
 public:
+    enum opType{STR, VSTR};
     StoreMInstruction(MachineBlock* p,
                     MachineOperand* src1, MachineOperand* src2, MachineOperand* src3 = nullptr, 
-                    int cond = MachineInstruction::NONE);
+                    int op = STR, int cond = MachineInstruction::NONE);
     void output();
 };
 
@@ -137,16 +144,26 @@ public:
     void output();
 };
 
-class StackMInstrcuton : public MachineInstruction
+class StackMInstruction : public MachineInstruction
 {
 public:
-    enum opType { PUSH, POP };
-    StackMInstrcuton(MachineBlock* p, int op, 
-                MachineOperand* src,
+    enum opType { PUSH, POP, VPUSH, VPOP };
+    StackMInstruction(MachineBlock* p, int op, 
+                std::vector<MachineOperand*> src,
                 int cond = MachineInstruction::NONE);
     void output();
 };
 
+class ZextMInstruction : public MachineInstruction
+{
+public:
+    ZextMInstruction(MachineBlock* p,
+                MachineOperand* dst, MachineOperand* src,
+                int cond = MachineInstruction::NONE);
+    void output();
+};
+
+/*============================================================================*/
 class MachineBlock
 {
 private:
@@ -156,6 +173,7 @@ private:
     std::vector<MachineInstruction*> inst_list;
     std::set<MachineOperand*> live_in;
     std::set<MachineOperand*> live_out;
+    int BranchCond = MachineInstruction::NONE;
 public:
     std::vector<MachineInstruction*>& getInsts() {return inst_list;};
     std::vector<MachineInstruction*>::iterator begin() { return inst_list.begin(); };
@@ -169,7 +187,11 @@ public:
     std::set<MachineOperand*>& getLiveOut() {return live_out;};
     std::vector<MachineBlock*>& getPreds() {return pred;};
     std::vector<MachineBlock*>& getSuccs() {return succ;};
+    void insertBefore(MachineInstruction* at, MachineInstruction* src);
+    void insertAfter(MachineInstruction* at, MachineInstruction* src);
     void output();
+    int getBranchCond(){ return BranchCond; };
+    void setBranchCond(int BCond){ this->BranchCond = BCond; };
 };
 
 class MachineFunction
@@ -200,12 +222,17 @@ class MachineUnit
 {
 private:
     std::vector<MachineFunction*> func_list;
+    // std::vector<IdentifierSymbolEntry*> global_var_list;
+    Unit* unit;
     void PrintGlobalDecl();
+    void PrintBridges();
 public:
     std::vector<MachineFunction*>& getFuncs() {return func_list;};
     std::vector<MachineFunction*>::iterator begin() { return func_list.begin(); };
     std::vector<MachineFunction*>::iterator end() { return func_list.end(); };
     void InsertFunc(MachineFunction* func) { func_list.push_back(func);};
+    // void insertGlobalVar(IdentifierSymbolEntry* sym_ptr) {global_var_list.push_back(sym_ptr);};
+    void setUnit(Unit* u) { unit = u;}
     void output();
 };
 

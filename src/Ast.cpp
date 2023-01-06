@@ -16,7 +16,11 @@ struct flags{
     Type* shouldReturn = nullptr;
     bool haveReturn = false;
     bool isInFunc = false;
-    bool isInWhile = false;
+    int isInWhileCnt = 0;
+    
+    //break和continue需要获得当前层次whileStmt的Cond_bb和End_bb
+    std::stack<BasicBlock*> whileCondStack;
+    std::stack<BasicBlock*> whileEndStack;
 
     //是否是最后一层条件表达式
     bool isOuterCond = false;
@@ -31,6 +35,7 @@ struct flags{
     std::vector<ExprNode*>::iterator dimListIter;
     bool isOuterArrDecl = false;
     
+    int cntParam = 0;
 } flag;
 
 //q13添加数组IR支持
@@ -566,12 +571,16 @@ void DeclStmt::genCode()
             }
             if(se->isParam()){
                 //形参需要一个label用于传参时写入
-                addr_se = new TemporarySymbolEntry(se->getType(), SymbolTable::getLabel());
+                // addr_se = new TemporarySymbolEntry(se->getType(), flag.cntParam);
+                // addr_se = new IdentifierSymbolEntry(*se);
+                // ((IdentifierSymbolEntry*)addr_se)->setParamNumber(flag.cntParam);
+                se->setParamNumber(flag.cntParam);
                 //形参label（变量保存位置）
-                func->addLabelParam(((TemporarySymbolEntry*)addr_se)->getLabel());
+                // func->addLabelParam(((TemporarySymbolEntry*)addr_se)->getLabel());
+                func->addLabelParam(flag.cntParam);
                 //另一个label，分配一片空间
                 auto tempPtr = new TemporarySymbolEntry(type, SymbolTable::getLabel());
-                auto srcParam = new Operand(addr_se);
+                auto srcParam = new Operand(se);
                 addr = new Operand(tempPtr); 
                 //把形参的值存入另一个label指向的空间中
                 new StoreInstruction(addr, srcParam, bb);
@@ -959,11 +968,29 @@ void ExprStmt::genCode() {
 }
 
 void BreakStmt::genCode() {
-
+    assert(flag.whileEndStack.size()!=0);
+    BasicBlock* bb = builder->getInsertBB();
+    Function *func = bb->getParent();
+    //获取当前while循环的end_bb
+    BasicBlock* end_bb = flag.whileEndStack.top();
+    //无条件跳转到end_bb
+    new UncondBrInstruction(end_bb, bb);
+    // 声明一个新的基本块用来插入后续的指令
+    BasicBlock* nextBlock = new BasicBlock(func);
+    builder->setInsertBB(nextBlock);
 }
 
 void ContinueStmt::genCode() {
-
+    assert(flag.whileCondStack.size()!=0);
+    BasicBlock* bb = builder->getInsertBB();
+    Function *func = bb->getParent();
+    //获取当前while循环的cond_bb
+    BasicBlock* cond_bb = flag.whileCondStack.top();
+    //无条件跳转到cond_bb
+    new UncondBrInstruction(cond_bb, bb);
+    // 声明一个新的基本块用来插入后续的指令
+    BasicBlock* nextBlock = new BasicBlock(func);
+    builder->setInsertBB(nextBlock);
 }
 
 void WhileStmt::genCode() {
@@ -978,7 +1005,10 @@ void WhileStmt::genCode() {
     then_bb = new BasicBlock(func);
     cond_bb = new BasicBlock(func);
     end_bb = new BasicBlock(func);
-
+    
+    //当前层次whileStmt的 cond和end bb入栈
+    flag.whileCondStack.push(cond_bb);
+    flag.whileEndStack.push(end_bb);
 
     new UncondBrInstruction(cond_bb, bb_prev);
     builder->setInsertBB(cond_bb);
@@ -997,6 +1027,10 @@ void WhileStmt::genCode() {
     new UncondBrInstruction(cond_bb, then_bb);
 
     builder->setInsertBB(end_bb);
+    
+    //当前层次whileStmt的 cond和end bb出栈
+    flag.whileCondStack.pop();
+    flag.whileEndStack.pop();
 }
 
 void FuncParam::genCode() {
@@ -1004,7 +1038,9 @@ void FuncParam::genCode() {
     for (auto &&i : paramList)
     {
         i->genCode();
+        flag.cntParam++;
     }
+    flag.cntParam = 0;
 }
 
 /*---------------------------TYPE CHECK----------------------------------------*/
@@ -1243,14 +1279,14 @@ void ExprStmt::typeCheck() {
 
 void BreakStmt::typeCheck() {
 
-    if(!flag.isInWhile){
+    if(!flag.isInWhileCnt){
         std::cout<<"错误！Break语句出现在非法位置！"<<std::endl;
     }
 
 }
 
 void ContinueStmt::typeCheck() {
-    if(!flag.isInWhile){
+    if(!flag.isInWhileCnt){
         std::cout<<"错误！Continue语句出现在非法位置！"<<std::endl;
     }
 }
@@ -1258,10 +1294,10 @@ void ContinueStmt::typeCheck() {
 void WhileStmt::typeCheck() {
 
     //p10break\continue的位置检查
-    flag.isInWhile = true;
+    flag.isInWhileCnt++;
     cond->typeCheck();
     whileBodyStmt->typeCheck();
-    flag.isInWhile = false;
+    flag.isInWhileCnt--;
 }
 
 void FuncParam::typeCheck() {
