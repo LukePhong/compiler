@@ -395,6 +395,7 @@ AddExp
             // (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) + (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
             if(temp1->isInt() && temp2->isInt()){
                 se = new ConstantSymbolEntry(TypeSystem::intType, temp1->getValueInt() + temp2->getValueInt());
+                // std::cout<<temp1->getValueInt()<<" "<<temp2->getValueInt()<<std::endl;
             }else{
                 se = new ConstantSymbolEntry(TypeSystem::floatType, (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) + (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
             }
@@ -415,6 +416,7 @@ AddExp
             // (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) - (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
             if(temp1->isInt() && temp2->isInt()){
                 se = new ConstantSymbolEntry(TypeSystem::intType, temp1->getValueInt() - temp2->getValueInt());
+                // std::cout<<temp1->getValueInt()<<" "<<temp2->getValueInt()<<std::endl;
             }else{
                 se = new ConstantSymbolEntry(TypeSystem::floatType, (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) - (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
             }
@@ -440,6 +442,7 @@ MulExp
             // (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) * (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
             if(temp1->isInt() && temp2->isInt()){
                 se = new ConstantSymbolEntry(TypeSystem::intType, temp1->getValueInt() * temp2->getValueInt());
+                // std::cout<<temp1->getValueInt() * temp2->getValueInt()<<std::endl;
             }else{
                 se = new ConstantSymbolEntry(TypeSystem::floatType, (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) * (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
             }
@@ -459,6 +462,7 @@ MulExp
             // (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) / (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
             if(temp1->isInt() && temp2->isInt()){
                 se = new ConstantSymbolEntry(TypeSystem::intType, temp1->getValueInt() / temp2->getValueInt());
+                // std::cout<<temp1->getValueInt() / temp2->getValueInt()<<std::endl;
             }else{
                 se = new ConstantSymbolEntry(TypeSystem::floatType, (temp1->isInt() ? temp1->getValueInt() : temp1->getValueFloat()) / (temp2->isInt() ? temp2->getValueInt() : temp2->getValueFloat()));
             }
@@ -502,9 +506,10 @@ UnaryExp
         if($2->getSymbolEntry()->isConstant()){
             // 因为所有的？：运算符都会导致类型的错误，所以要全部进行更改
             if(((ConstantSymbolEntry*)($2->getSymbolEntry()))->isInt()){
-                se = new ConstantSymbolEntry($2->getSymbolEntry()->getType(), -((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueInt());
+                se = new ConstantSymbolEntry($2->getSymbolEntry()->getType(), -(((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueInt()));
+                // std::cout<<-(((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueInt())<<std::endl;
             }else{
-                se = new ConstantSymbolEntry($2->getSymbolEntry()->getType(), -((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueFloat());
+                se = new ConstantSymbolEntry($2->getSymbolEntry()->getType(), -(((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueFloat()));
             }
             // se = new ConstantSymbolEntry($2->getSymbolEntry()->getType(), 
             //     -(((ConstantSymbolEntry*)($2->getSymbolEntry()))->isInt() ? ((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueInt() : ((ConstantSymbolEntry*)($2->getSymbolEntry()))->getValueFloat()));
@@ -544,7 +549,10 @@ UnaryExp
 PrimaryExp
     :
     LVal {
-        $$ = $1;
+        if($1->getSymbolEntry()->isConstant())
+            $$ = new Constant(((IdentifierSymbolEntry*)($1->getSymbolEntry()))->getGlbValue());
+        else
+            $$ = $1;
     }
     | INTEGER {
         SymbolEntry *se = new ConstantSymbolEntry(TypeSystem::intType, $1);
@@ -696,8 +704,11 @@ DeclStmt
                     se = new IdentifierSymbolEntry(t, i.name, i.level, SymbolEntry::CONSTANT);
                 }
             }
-            else
+            else{
                 se = new IdentifierSymbolEntry($2, i.name, i.level, SymbolEntry::CONSTANT);
+                if((((ExprNode*)i.exp)->getSymbolEntry())->isConstant())
+                    ((IdentifierSymbolEntry*)se)->setGlbConst(((ExprNode*)i.exp)->getSymbolEntry());
+            }
             identifiers->install(i.name, se);
             //q3添加DefStmt变量常量定义语句
             if(i.isDef)
