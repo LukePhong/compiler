@@ -617,9 +617,10 @@ void MachineUnit::output()
     * 1. You need to print global variable/const declarition code;
     * 2. Traverse all the function in func_list to print assembly code;
     * 3. Don't forget print bridge label at the end of assembly code!! */
+    fprintf(yyout, "\t.cpu cortex-a72\n");
     fprintf(yyout, "\t.arch armv8-a\n");
+    fprintf(yyout, "\t.fpu vfpv3-d16\n");
     fprintf(yyout, "\t.arch_extension crc\n");
-    fprintf(yyout, "\t.arm\n");
     PrintGlobalDecl();
     for(auto iter : func_list)
         iter->output();
