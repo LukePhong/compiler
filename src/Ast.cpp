@@ -494,7 +494,18 @@ void Id::genCode()
     BasicBlock *bb = builder->getInsertBB();
     Function *func = bb->getParent();
     Operand *addr = dynamic_cast<IdentifierSymbolEntry*>(symbolEntry)->getAddr();
-    new LoadInstruction(dst, addr, bb);
+    // 现在数组的Operand并不是数组类型而是指针类型
+    if(!((IdentifierSymbolEntry*)symbolEntry)->getType()->isArrayType())
+        new LoadInstruction(dst, addr, bb);
+    else{
+        auto dim = new Operand(new ConstantSymbolEntry(TypeSystem::intType, 0));
+        // auto se = new IdentifierSymbolEntry(*(IdentifierSymbolEntry*)symbolEntry);
+        // se->setType(new PointerType(((ArrayType*)(symbolEntry->getType()))->getElementType()));
+        auto p = new PointerType(((ArrayType*)(symbolEntry->getType()))->getElementType()); // 不要直接把new的对象写在实参里
+        auto se = new TemporarySymbolEntry(p, SymbolTable::getLabel());
+        dst = new Operand(se);
+        new GetElementPtrInstruction(dst, addr, dim, bb);
+    }
 
     // 不是最外层的ID是不能调用的，因为比如a==5是不行的
     if(flag.isUnderCond && flag.isOuterCond){
@@ -756,7 +767,8 @@ void FuncCall::genCode() {
     {
         i->genCode();
         Operand* dst = i->getOperand();
-        dst = typeConvention(paramTypes[cnt], dst, bb);
+        if(dst->getType()->isNumber())
+            dst = typeConvention(paramTypes[cnt], dst, bb);
         params.push_back(dst);
         cnt++;
     }

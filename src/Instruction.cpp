@@ -368,7 +368,8 @@ void GetElementPtrInstruction::output() const
     src_type = operands[1]->getType()->toStr();
     //%7 = getelementptr inbounds [1 x i32], [1 x i32]* @aaa, i64 0, i64 0, align 4
     fprintf(yyout, "  %s = getelementptr inbounds ", dst.c_str());
-    if(dim->getEntry()->isConstant())
+    // if(dim->getEntry()->isConstant())
+    if(((PointerType*)operands[1]->getType())->getValueType()->isArrayType())   // 这才是决定那个0的原因
         fprintf(yyout, "%s, %s %s, i64 0, ", src_type.substr(0, src_type.length() - 1).c_str(), src_type.c_str(), src.c_str());
     else
         fprintf(yyout, "%s, %s %s, ", src_type.substr(0, src_type.length() - 1).c_str(), src_type.c_str(), src.c_str());
