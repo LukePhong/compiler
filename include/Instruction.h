@@ -27,7 +27,7 @@ public:
     virtual void output() const = 0;
     MachineOperand* genMachineOperand(Operand*);
     MachineOperand* genMachineReg(int reg);
-    MachineOperand* genMachineVReg();
+    MachineOperand* genMachineVReg(bool isFlt = false);
     MachineOperand* genMachineImm(int val);
     MachineOperand* genMachineLabel(int block_no);
     virtual void genMachineCode(AsmBuilder*) = 0;
