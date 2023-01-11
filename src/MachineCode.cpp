@@ -1,8 +1,9 @@
 #include "MachineCode.h"
 #include "Unit.h"
+#include <vector>
 extern FILE* yyout;
 
-MachineOperand::MachineOperand(int tp, int val)
+MachineOperand::MachineOperand(int tp, int val, bool isFlt, float fVal)
 {
     this->type = tp;
     if(tp == MachineOperand::IMM){
@@ -10,6 +11,9 @@ MachineOperand::MachineOperand(int tp, int val)
     }
     else 
         this->reg_no = val;
+    //支持浮点数
+    this->isFlt = isFlt;
+    if(this->isFlt) this->fval = fVal;
 }
 
 MachineOperand::MachineOperand(std::string label, bool isFuncLabel) : isFuncLabel(isFuncLabel)
@@ -62,7 +66,16 @@ void MachineOperand::PrintReg()
         fprintf(yyout, "pc");
         break;
     default:
-        fprintf(yyout, "r%d", reg_no);
+        if(this->isFlt){
+            if(reg_no <= 47) {
+                fprintf(yyout, "s%d", reg_no-16);
+            }
+            else {
+                fprintf(yyout, "FPSCR");
+            }
+        }else{
+            fprintf(yyout, "r%d", reg_no);
+        }
         break;
     }
 }
@@ -77,7 +90,14 @@ void MachineOperand::output()
     switch (this->type)
     {
     case IMM:
-        fprintf(yyout, "#%d", this->val);
+        if(this->isFlt){
+            uint32_t temp = reinterpret_cast<uint32_t&>(this->fval);
+            fprintf(yyout, "#%u", temp);
+        }
+        else{
+            fprintf(yyout, "#%d", this->val);
+        }
+        
         break;
     case VREG:
         fprintf(yyout, "v%d", this->reg_no);
@@ -100,8 +120,23 @@ void MachineInstruction::PrintCond()
     // TODO
     switch (cond)
     {
+    case EQ:
+        fprintf(yyout, "eq");
+        break;
+    case NE:
+        fprintf(yyout, "ne");
+        break;
     case LT:
         fprintf(yyout, "lt");
+        break;
+    case GT:
+        fprintf(yyout, "gt");
+        break;
+    case LE:
+        fprintf(yyout, "le");
+        break;
+    case GE:
+        fprintf(yyout, "ge");
         break;
     default:
         break;
@@ -187,14 +222,33 @@ LoadMInstruction::LoadMInstruction(MachineBlock* p,
 
 void LoadMInstruction::output()
 {
-    fprintf(yyout, "\tldr ");
+    switch (op)
+    {
+    case LoadMInstruction::LDR:
+        fprintf(yyout, "\tldr ");
+        break;
+    case LoadMInstruction::VLDR:
+        fprintf(yyout, "\tvldr.32 ");
+        break;
+    default:
+        break;
+    }
+    
     this->def_list[0]->output();
     fprintf(yyout, ", ");
 
     // Load immediate num, eg: ldr r1, =8
     if(this->use_list[0]->isImm())
     {
-        fprintf(yyout, "=%d\n", this->use_list[0]->getVal());
+        //支持浮点数
+        if(use_list[0]->isFloat())
+        {
+            float fval = this->use_list[0]->getFval();
+            uint32_t temp = reinterpret_cast<uint32_t&>(fval);
+            fprintf(yyout, "=%u\n", temp);
+        }
+        else
+            fprintf(yyout, "=%d\n", this->use_list[0]->getVal());
         return;
     }
 
@@ -236,7 +290,19 @@ StoreMInstruction::StoreMInstruction(MachineBlock* p,
 void StoreMInstruction::output()
 {
     //p1补全str指令的输出和生成
-    fprintf(yyout, "\tstr ");
+    //支持浮点数
+    switch (op)
+    {
+    case StoreMInstruction::STR:
+        fprintf(yyout, "\tstr ");
+        break;
+    case StoreMInstruction::VSTR:
+        fprintf(yyout, "\tvstr.32 ");
+        break;
+    default:
+        break;
+    }
+    
     this->use_list[0]->output();
     fprintf(yyout, ", ");
 
@@ -273,31 +339,25 @@ MovMInstruction::MovMInstruction(MachineBlock* p, int op,
 void MovMInstruction::output() 
 {
     //如何表示cond？
-    switch (cond)
+    switch (op)
     {
-    case EQ:
-        fprintf(yyout, "\tmoveq\t");
+    case MovMInstruction::MOV:
+        fprintf(yyout, "\tmov");
         break;
-    case NE:
-        fprintf(yyout, "\tmovne\t");
+    case MovMInstruction::MOVT:
+        fprintf(yyout, "\tmovt");
         break;
-    case LT:
-        fprintf(yyout, "\tmovlt\t");
+    case MovMInstruction::VMOV:
+        fprintf(yyout, "\tvmov");
         break;
-    case GT:
-        fprintf(yyout, "\tmovgt\t");
-        break;
-    case LE:
-        fprintf(yyout, "\tmovle\t");
-        break;
-    case GE:
-        fprintf(yyout, "\tmovge\t");
+    case MovMInstruction::VMOVF32:
+        fprintf(yyout, "\tvmov.f32");
         break;
     default:
-        fprintf(yyout, "\tmov\t");
         break;
     }
-    // fprintf(yyout, "\tmov ");
+    PrintCond();
+    fprintf(yyout, "\t");
     this->def_list[0]->output();
     fprintf(yyout, ", ");
     this->use_list[0]->output();
@@ -512,17 +572,35 @@ void MachineFunction::output()
     *  4. Allocate stack space for local variable */
     fprintf(yyout, "\tpush {fp, lr}\n");
     fprintf(yyout, "\tmov fp, sp\n");
-    size_t cnt = 0;
+    std::vector<int> regs, fregs;
     if(!saved_regs.empty()){
-        fprintf(yyout, "\tpush {");
         for (auto &&i : saved_regs)
         {
+            if(i<16)
+                regs.push_back(i);
+            else
+                fregs.push_back(i);
+        } 
+    }
+    size_t cnt = 0;
+    if(!regs.empty()){
+        fprintf(yyout, "\tpush {");
+        for (auto &&i : regs)
+        {
             fprintf(yyout, "r%d", i);
-            if(cnt != saved_regs.size() - 1)
+            if(cnt != regs.size() - 1)
                 fprintf(yyout, ", ");
             cnt++;
         }
         fprintf(yyout, "}\n");
+    }
+    if(!fregs.empty()){
+        for (auto &&i : fregs)
+        {
+            fprintf(yyout, "\tpush {");
+            fprintf(yyout, "s%d", i-16);
+            fprintf(yyout, "}\n");
+        }
     }
     if(stack_size!=0){
         if(stack_size > 255) {
