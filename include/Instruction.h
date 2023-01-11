@@ -185,6 +185,7 @@ public:
     enum {I2F, F2I};
 };
 
+// 强制类型转换
 class BitCastInstruction : public ZextInstruction
 {
 public:

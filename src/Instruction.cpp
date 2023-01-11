@@ -467,22 +467,6 @@ void ZextInstruction::output() const
     fprintf(yyout, "  %s = zext %s %s to %s\n", dst.c_str(), src_type.c_str(), src.c_str(), dst_type.c_str());
 }
 
-void ZextInstruction::genMachineCode(AsmBuilder* builder){
-    MachineBlock* cur_block = builder->getBlock();
-    MachineInstruction* cur_inst = nullptr;
-    MachineOperand* src = genMachineOperand(operands[1]);
-    if(src->isImm())
-    {
-        auto internal_reg = genMachineVReg();
-        cur_inst = new LoadMInstruction(cur_block, internal_reg, src);
-        cur_block->InsertInst(cur_inst);
-        src = new MachineOperand(*internal_reg);
-    }
-    MachineOperand* dst = genMachineOperand(operands[0]);
-    cur_inst = new ZextMInstruction(cur_block, dst, src);
-    cur_block->InsertInst(cur_inst);
-}
-
 void BitCastInstruction::output() const
 {
     std::string dst = operands[0]->toStr();
@@ -490,10 +474,6 @@ void BitCastInstruction::output() const
     std::string dst_type = operands[0]->getType()->toStr();
     std::string src_type = operands[1]->getType()->toStr();
     fprintf(yyout, "  %s = bitcast %s %s to %s\n", dst.c_str(), src_type.c_str(), src.c_str(), dst_type.c_str());
-}
-
-void BitCastInstruction::genMachineCode(AsmBuilder* builder){
-
 }
 
 IntFloatCastInstruction::IntFloatCastInstruction(unsigned opcode, Operand *dst, Operand *src, BasicBlock *insert_bb) : Instruction(CAST, insert_bb)
@@ -555,10 +535,13 @@ MachineOperand* Instruction::genMachineOperand(Operand* ope)
     else if(se->isVariable() || (se->isConstant() && !se->getType()->isNumber()))
     {
         auto id_se = dynamic_cast<IdentifierSymbolEntry*>(se);
-        if(id_se->isGlobal())
+        if(id_se->isGlobal())//||id_se->getType()->isPtrType())    // ||后面的部分是为了数组
             mope = new MachineOperand(id_se->toAsmStr().c_str());
-        else
-            exit(0);
+        else{
+            // exit(0);
+            // assert(0);
+            mope = new MachineOperand(MachineOperand::IMM, ((TemporarySymbolEntry*)se)->getOffset());
+        }
     }
     return mope;
 }
@@ -592,7 +575,16 @@ void AllocaInstruction::genMachineCode(AsmBuilder* builder)
     * Allocate stack space for local variabel
     * Store frame offset in symbol entry */
     auto cur_func = builder->getFunction();
-    int offset = cur_func->AllocSpace(4);
+    // int offset = cur_func->AllocSpace(4);
+    // 分情况，数组需要计算空间的大小
+    int offset;
+    // 先与上判断条件：防止错误的类型转换
+    if(!se->isTemporary() && ((IdentifierSymbolEntry*)se)->isArray()){
+        auto i = ((IdentifierSymbolEntry*)se);
+        offset = cur_func->AllocSpace(((SizedType*)i->getArrayType()->getElementType())->getSize() * i->getArrayType()->getCntEleNum() / 4);
+    }else{
+        offset = cur_func->AllocSpace(4);
+    }
     dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry())->setOffset(-offset);
 }
 
@@ -931,10 +923,11 @@ void FunctionCallInstuction::genMachineCode(AsmBuilder* builder){
     auto cur_block = builder->getBlock();
     MachineInstruction* cur_inst = nullptr;
     std::vector<MachineOperand*> additional_args;
-    // for(unsigned int i = 1;i < operands.size();i++){
+    // 应从右向左进行处理
     for(unsigned int i = operands.size() - 1; i > 0; i--){
         //如果类型是数组，需要考虑局部数组指针的情况
-        if(operands[i]->getEntry()->getType()->isArrayType()){
+        // if(operands[i]->getEntry()->getType()->isArrayType()){
+        if(operands[i]->getEntry()->getType()->isPtrType()){
             //需要保证不是值而是数组指针
             // bool isPointer = false;
             // if(((ArrayType*)operands[i]->getEntry()->getType())->getElementType()->isInt()){
@@ -949,19 +942,21 @@ void FunctionCallInstuction::genMachineCode(AsmBuilder* builder){
             // }
             //必须保证是局部数组，而且不是传进来的参数
             //必须确定这个数组在当前函数的调用栈中能够找到
-            if(0/*is local*/){
+            if(1/*is local*/){
                 auto dst_addr = genMachineVReg();
                 auto fp = genMachineReg(11);
-                auto offset = genMachineOperand(operands[i]);
-                if(offset->isImm()) {
-                    auto val = ((ConstantSymbolEntry*)(operands[i]->getEntry()))->isInt() ? ((ConstantSymbolEntry*)(operands[i]->getEntry()))->getValueInt() : ((ConstantSymbolEntry*)(operands[i]->getEntry()))->getValueFloat();
+                // auto offset = genMachineOperand(operands[i]);
+                // if(offset->isImm()) {
+                    // auto val = ((ConstantSymbolEntry*)(operands[i]->getEntry()))->isInt() ? ((ConstantSymbolEntry*)(operands[i]->getEntry()))->getValueInt() : ((ConstantSymbolEntry*)(operands[i]->getEntry()))->getValueFloat();
+                    auto val = ((TemporarySymbolEntry*)operands[i]->getEntry())->getOffset();
+                    auto offset = new MachineOperand(MachineOperand::IMM, val);
                     if(val > 255 || val < -255) {
                         auto internal_reg = genMachineVReg();
                         cur_inst = new LoadMInstruction(cur_block, internal_reg, offset);
                         cur_block->InsertInst(cur_inst);
                         offset = new MachineOperand(*internal_reg);
                     }
-                }
+                // }
                 cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD, dst_addr, fp, offset);
                 cur_block->InsertInst(cur_inst);
 
@@ -1042,4 +1037,32 @@ void FunctionCallInstuction::genMachineCode(AsmBuilder* builder){
         cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD, dst, src1, src2);
         cur_block->InsertInst(cur_inst);
     }
+}
+
+void ZextInstruction::genMachineCode(AsmBuilder* builder){
+    MachineBlock* cur_block = builder->getBlock();
+    MachineInstruction* cur_inst = nullptr;
+    MachineOperand* src = genMachineOperand(operands[1]);
+    if(src->isImm())
+    {
+        auto internal_reg = genMachineVReg();
+        cur_inst = new LoadMInstruction(cur_block, internal_reg, src);
+        cur_block->InsertInst(cur_inst);
+        src = new MachineOperand(*internal_reg);
+    }
+    MachineOperand* dst = genMachineOperand(operands[0]);
+    cur_inst = new ZextMInstruction(cur_block, dst, src);
+    cur_block->InsertInst(cur_inst);
+}
+
+void BitCastInstruction::genMachineCode(AsmBuilder* builder){
+    // 强制类型转换因为不会变动数据，不需要生成任何汇编指令
+    MachineBlock* cur_block = builder->getBlock();
+    MachineInstruction* cur_inst = nullptr;
+    //p5汇编数组寻址-起始地址
+    ((TemporarySymbolEntry*)operands[0]->getEntry())->setOffset(((TemporarySymbolEntry*)operands[1]->getEntry())->getOffset());
+    MachineOperand* dst = genMachineOperand(operands[0]);
+    MachineOperand* src = genMachineOperand(operands[1]);
+    cur_inst = new BitCastMInstruction(cur_block, dst, src);
+    cur_block->InsertInst(cur_inst);
 }

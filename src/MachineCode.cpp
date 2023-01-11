@@ -464,6 +464,10 @@ void ZextMInstruction::output() {
     fprintf(yyout, "\n");
 }
 
+void BitCastMInstruction::output() {
+
+}
+
 /*============================================================================*/
 MachineFunction::MachineFunction(MachineUnit* p, SymbolEntry* sym_ptr) 
 { 
@@ -580,14 +584,14 @@ void MachineUnit::PrintGlobalDecl()
                 fprintf(yyout,"\t.size %s, 4\n", var->toAsmStr().c_str());
                 fprintf(yyout,"%s:\n", var->toAsmStr().c_str());
                 // TODO: 待将所有的数组元素初始值保存下来后填充
-                // if(((ArrayType*)var->getType())->getElementType()->isInt()) {
-                //     for (auto value: var->arrayValues) {
-                //         fprintf(yyout, "\t.word %d\n", int(value));
-                //     }
-                // }
-                // else {
-                //     ;
-                // }
+                if(((ArrayType*)var->getType())->getElementType()->isInt()) {
+                    for (auto value: var->getArrExpr()) {
+                        fprintf(yyout, "\t.word %d\n", ((ConstantSymbolEntry*)value->getSymPtr())->getValueInt());
+                    }
+                }
+                else {
+                    ;
+                }
             }
         }
         else {

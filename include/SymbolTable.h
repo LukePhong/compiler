@@ -97,6 +97,8 @@ class IdentifierSymbolEntry : public SymbolEntry
 private:
     enum {GLOBAL, PARAM, LOCAL};
     std::string name;
+    // ASM name to LLVM functions
+    std::string asmName;
     int scope;
     Operand *addr;  // The address of the identifier.
     // You can add any field you need here.
@@ -110,7 +112,8 @@ private:
     std::string arrayDefStr = "zeroinitializer";
     std::vector<ExprNode*> arrExprVec;  // 按行存储的expr列表
     std::string nameOfFunc = "";
-
+    bool isArrayIdent = false;
+    ArrayType* arrType = nullptr;
     
     // 函数参数
     int paramNumber = -1;
@@ -157,7 +160,11 @@ public:
     void addArrExpr(ExprNode* e) { arrExprVec.push_back(e); }
     std::vector<ExprNode*> getArrExpr() { return arrExprVec; }
     void setNameOfFunc(std::string s) { nameOfFunc = s; }
-
+    void setAsmName(std::string s) { asmName = s; }
+    bool isArray() { return isArrayIdent; }
+    bool setArray() { isArrayIdent = true; }
+    void setArrayType( ArrayType* t) { arrType = t; }
+    ArrayType* getArrayType() { return arrType; }
 };
 
 

@@ -117,6 +117,8 @@ std::string IdentifierSymbolEntry::toStr()
 
 std::string IdentifierSymbolEntry::toAsmStr()
 {
+    if(!asmName.empty())
+        return asmName;
     return name;
 }
 

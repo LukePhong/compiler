@@ -151,6 +151,7 @@ int main(int argc, char *argv[])
     tempParaType.push_back(TypeSystem::boolType);
     auto funcType12 = new FunctionType(TypeSystem::voidType, tempParaType);
     auto id12 = new IdentifierSymbolEntry(funcType12, "llvm.memset.p0i8.i64", 0);
+    id12->setAsmName("memset");     // 目前认为memset/memcpy对应的就是这两个标准函数，但实际上llvm最后多一个参数<isvolatile>
     identifiers->installFunc("llvm.memset.p0i8.i64", id12);
     unit.getSysFuncs().push_back(id12);
 
@@ -158,6 +159,7 @@ int main(int argc, char *argv[])
     auto funcType13 = new FunctionType(TypeSystem::voidType, tempParaType);
     auto id13 = new IdentifierSymbolEntry(funcType13, "llvm.memcpy.p0i8.p0i8.i64", 0);
     identifiers->installFunc("llvm.memcpy.p0i8.p0i8.i64", id13);
+    id13->setAsmName("memcpy");
     unit.getSysFuncs().push_back(id13);
     //TODO: putf
 

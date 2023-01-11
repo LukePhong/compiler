@@ -83,14 +83,16 @@ void getArrayDefStr(int idx, bool checkTop = false){
     auto p = ((ArrayType*)flag.arrayIdStk.top()->getType());
     if(idx == dims.size()){
         auto& top = flag.arrDefIterStk.top();
+        ExprNode* e;
         if(checkTop && !(*top.base())){   //这样就可以补零了
             flag.arrayDefString<<"0";
-            auto e = new Constant(new ConstantSymbolEntry(p->getElementType(), 0));
+            e = new Constant(new ConstantSymbolEntry(p->getElementType(), 0));
         }else{
-            auto e = getNextExprInArrDef();
+            e = getNextExprInArrDef();
             flag.arrayDefString<<((ConstantSymbolEntry*)e->getSymbolEntry())->genStr(p->getElementType());
-            flag.arrayIdStk.top()->addArrExpr(e);
+            // flag.arrayIdStk.top()->addArrExpr(e);
         }
+        flag.arrayIdStk.top()->addArrExpr(e);
         return;
     }
     flag.arrayDefString<<"[";
@@ -498,6 +500,7 @@ void Id::genCode()
     if(!((IdentifierSymbolEntry*)symbolEntry)->getType()->isArrayType())
         new LoadInstruction(dst, addr, bb);
     else{
+        // 为函数传入数组的情况
         auto dim = new Operand(new ConstantSymbolEntry(TypeSystem::intType, 0));
         // auto se = new IdentifierSymbolEntry(*(IdentifierSymbolEntry*)symbolEntry);
         // se->setType(new PointerType(((ArrayType*)(symbolEntry->getType()))->getElementType()));
@@ -602,6 +605,11 @@ void DeclStmt::genCode()
     int cnt = 0;
     for (const auto id:idList){
         IdentifierSymbolEntry *se = dynamic_cast<IdentifierSymbolEntry *>(id->getSymPtr());
+        // 保证后续关于数组的判断可以正常进行
+        if(se->getType()->isArrayType()){
+            se->setArray();
+            se->setArrayType(((ArrayType*)se->getType()));
+        }
         if(se->isGlobal())
         {
             Operand *addr;
@@ -928,7 +936,7 @@ void ArrayDef::genCode() {
             name->setType(new PointerType(name->getType()));
             auto opName = new Operand(name);
             new BitCastInstruction(opGlb, opName, bb);
-            //调用memset函数
+            //调用memcpy函数
             std::vector<Operand*> ops;
             ops.push_back(opStk);
             ops.push_back(opGlb);

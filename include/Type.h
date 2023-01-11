@@ -35,12 +35,22 @@ public:
     bool isPtrType() { return kind == PTR; }
 };
 
-class IntType : public Type
+class SizedType : public Type
 {
-private:
+protected:
     int size;
 public:
-    IntType(int size) : Type(Type::INT), size(size){};
+    SizedType(int kind, int size) : Type(kind), size(size) {};
+    int getSize() { return size; }
+};
+
+class IntType : public SizedType
+{
+// private:
+    // int size;
+public:
+    // IntType(int size) : Type(Type::INT), size(size){};
+    IntType(int size) : SizedType(Type::INT, size) {};
     std::string toStr();
 };
 
@@ -89,12 +99,13 @@ public:
 };
 
 //q6浮点数支持
-class FloatType : public Type
+class FloatType : public SizedType
 {
-private:
-    int size;
+// private:
+    // int size;
 public:
-    FloatType(int size) : Type(Type::FLOAT), size(size){};
+    // FloatType(int size) : Type(Type::FLOAT), size(size){};
+    FloatType(int size) : SizedType(Type::FLOAT, size) {};
     std::string toStr();
 };
 class ArrayFloatType : public ArrayType
@@ -107,12 +118,13 @@ public:
     // Type* getElementType() { return TypeSystem::floatType; };
 };
 
-class BoolType : public Type
+class BoolType : public SizedType
 {
-private:
-    int size;
+// private:
+    // int size;
 public:
-    BoolType(int size) : Type(Type::BOOL), size(size){};
+    // BoolType(int size) : Type(Type::BOOL), size(size){};
+    BoolType(int size) : SizedType(Type::BOOL, size) {};
     std::string toStr();
 };
 
