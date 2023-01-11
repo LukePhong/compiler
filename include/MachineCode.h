@@ -31,13 +31,14 @@ private:
     MachineInstruction* parent;
     int type;
     int val;  // value of immediate number
+    float fval; //value of float immediate number
     int reg_no; // register no
     std::string label; // address label
     bool isFuncLabel;
     bool isFlt = false;  // 判断是否浮点数
 public:
     enum { IMM, VREG, REG, LABEL };
-    MachineOperand(int tp, int val);
+    MachineOperand(int tp, int val, bool isFlt = false, float fVal=0.0);
     MachineOperand(std::string label, bool isFunc = false);
     bool operator == (const MachineOperand&) const;
     bool operator < (const MachineOperand&) const;
@@ -47,6 +48,7 @@ public:
     bool isLabel() { return this->type == LABEL; };
     bool isOverFlowImm() { return this->type == IMM && (val > 255 || val <-255);}
     int getVal() {return this->val; };
+    float getFval() { return this->fval; };
     bool isFloat() { return this->isFlt; }
     int getReg() {return this->reg_no; };
     void setReg(int regno) {this->type = REG; this->reg_no = regno;};
@@ -117,7 +119,7 @@ public:
 class MovMInstruction : public MachineInstruction
 {
 public:
-    enum opType { MOV, MVN };
+    enum opType { MOV, MVN, MOVT, VMOV, VMOVF32 };
     MovMInstruction(MachineBlock* p, int op, 
                 MachineOperand* dst, MachineOperand* src,
                 int cond = MachineInstruction::NONE);
