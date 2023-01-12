@@ -76,6 +76,7 @@ class GetElementPtrInstruction : public LoadInstruction
 public:
     GetElementPtrInstruction(Operand *dst, Operand *src_addr, Operand * dim, BasicBlock *insert_bb = nullptr);
     void output() const;
+    void genMachineCode(AsmBuilder*);
 private:
     // IdentifierSymbolEntry* arrDef;
     // std::vector<ExprNode*>& dimList;
@@ -98,7 +99,7 @@ public:
     ~BinaryInstruction();
     void output() const;
     void genMachineCode(AsmBuilder*);
-    enum {SUB, ADD, MUL, DIV, MOD, AND, OR};
+    enum {SUB, ADD, MUL, DIV, MOD, AND, OR, LSL};
 };
 
 class CmpInstruction : public Instruction

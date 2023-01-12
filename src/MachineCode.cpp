@@ -153,6 +153,9 @@ void BinaryMInstruction::output()
     case BinaryMInstruction::OR:
         fprintf(yyout, "\torr ");
         break;
+    case BinaryMInstruction::LSL:
+        fprintf(yyout, "\tlsl ");
+        break;
     default:
         break;
     }

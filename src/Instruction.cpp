@@ -786,6 +786,9 @@ void BinaryInstruction::genMachineCode(AsmBuilder* builder)
     case OR:
         cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::OR, dst, src1, src2);
         break;
+    case LSL:
+        cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::LSL, dst, src1, src2);
+        break;
     default:
         break;
     }
@@ -1077,4 +1080,57 @@ void BitCastInstruction::genMachineCode(AsmBuilder* builder){
     MachineOperand* src = genMachineOperand(operands[1]);
     cur_inst = new BitCastMInstruction(cur_block, dst, src);
     cur_block->InsertInst(cur_inst);
+}
+
+void GetElementPtrInstruction::genMachineCode(AsmBuilder* builder){
+    MachineBlock* cur_block = builder->getBlock();
+    MachineInstruction* cur_inst = nullptr;
+
+    auto ptrType = (PointerType*)operands[0]->getType();
+    bool isLastLevel = ((PointerType*)operands[0]->getType())->getValueType()->isNumber();
+    auto num = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
+    Operand* tempOp;
+    // if(isLastLevel)
+        tempOp = operands[0];
+    // else
+    //     tempOp = new Operand(*operands[0]);
+    tempOp->setEntry(num);
+    MachineOperand* dst = genMachineOperand(tempOp);
+    MachineOperand* src = genMachineOperand(operands[1]);
+    if(src->isImm())
+    {
+        auto internal_reg = genMachineVReg();
+        cur_inst = new LoadMInstruction(cur_block, internal_reg, src);
+        cur_block->InsertInst(cur_inst);
+        src = new MachineOperand(*internal_reg);
+    }
+    MachineOperand* opDim = genMachineOperand(dim);
+    if(opDim->isImm()){
+        auto internal_reg = genMachineVReg();
+        cur_inst = new LoadMInstruction(cur_block, internal_reg, opDim);
+        cur_block->InsertInst(cur_inst);
+        opDim = new MachineOperand(*internal_reg);
+    }
+    // 需要获取余下的维度中的元素总数
+    if(!isLastLevel){
+        ((ArrayType*)ptrType->getValueType())->countEleNum();
+        auto eleMOp = genMachineImm(((ArrayType*)ptrType->getValueType())->getCntEleNum());
+        auto internal_reg = genMachineVReg();
+        cur_inst = new LoadMInstruction(cur_block, internal_reg, eleMOp);
+        cur_block->InsertInst(cur_inst);
+        eleMOp = new MachineOperand(*internal_reg);
+        cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::MUL, opDim, opDim, eleMOp);
+        cur_block->InsertInst(cur_inst);    
+    }
+    auto cstMOp = genMachineImm(2);
+    cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::LSL, opDim, opDim, cstMOp);
+    cur_block->InsertInst(cur_inst);
+    cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD, dst, src, opDim);
+    cur_block->InsertInst(cur_inst);
+    // 到了最后一层了，我们最终的目的是和fp一起算出正确的位置
+    if(isLastLevel){
+        auto fp = genMachineReg(11);
+        cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD, dst, fp, dst);
+        cur_block->InsertInst(cur_inst);
+    }
 }
