@@ -189,7 +189,7 @@ public:
 class TemporarySymbolEntry : public SymbolEntry
 {
 private:
-    int stack_offset;
+    int stack_offset = 0;
     int label;
 public:
     TemporarySymbolEntry(Type *type, int label);

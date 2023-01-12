@@ -74,13 +74,13 @@ public:
 class GetElementPtrInstruction : public LoadInstruction
 {
 public:
-    GetElementPtrInstruction(Operand *dst, Operand *src_addr, Operand * dim, BasicBlock *insert_bb = nullptr);
+    GetElementPtrInstruction(Operand *dst, Operand *src_addr, Operand * dim, /*bool isParam = false,*/ BasicBlock *insert_bb = nullptr, IdentifierSymbolEntry* ident = nullptr);
     void output() const;
     void genMachineCode(AsmBuilder*);
 private:
-    // IdentifierSymbolEntry* arrDef;
-    // std::vector<ExprNode*>& dimList;
     Operand * dim;
+    // bool isParam = false;
+    IdentifierSymbolEntry* arr;
 };
 
 class StoreInstruction : public Instruction

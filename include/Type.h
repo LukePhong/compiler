@@ -59,13 +59,17 @@ class PointerType : public Type
 private:
     Type *valueType;
     bool isGlbPtr = false;
+    bool is4Array = false;
 public:
-    PointerType(Type* valueType, bool isGlb = false) : Type(Type::PTR), isGlbPtr(isGlb) {this->valueType = valueType;};
+    PointerType(Type* valueType, bool isGlb = false, bool isArr = false) : Type(Type::PTR), isGlbPtr(isGlb), is4Array(isArr)
+        {this->valueType = valueType;};
     std::string toStr();
     bool isMultiPtr() { return valueType->isPtrType(); }
     Type *getValueType() { return valueType; }
     bool isGlobal() { return isGlbPtr; }
     void setGlobal() { isGlbPtr = true; }
+    bool isArray() { return is4Array; }
+    void set4Array() { is4Array = true; }
 };
 
 class ArrayType : public Type{

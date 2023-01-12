@@ -352,8 +352,8 @@ void LoadInstruction::output() const
 }
 
 //q13添加数组IR支持
-GetElementPtrInstruction::GetElementPtrInstruction(Operand *dst, Operand *src_addr, Operand * dim, BasicBlock *insert_bb) 
-    : LoadInstruction(dst, src_addr, insert_bb), dim(dim) 
+GetElementPtrInstruction::GetElementPtrInstruction(Operand *dst, Operand *src_addr, Operand * dim, BasicBlock *insert_bb, IdentifierSymbolEntry* ident) 
+    : LoadInstruction(dst, src_addr, insert_bb), dim(dim), arr(ident)
 {
     dim->addUse(this);
 }
@@ -369,7 +369,7 @@ void GetElementPtrInstruction::output() const
     //%7 = getelementptr inbounds [1 x i32], [1 x i32]* @aaa, i64 0, i64 0, align 4
     fprintf(yyout, "  %s = getelementptr inbounds ", dst.c_str());
     // if(dim->getEntry()->isConstant())
-    if(((PointerType*)operands[1]->getType())->getValueType()->isArrayType())   // 这才是决定那个0的原因
+    if(((PointerType*)operands[1]->getType())->getValueType()->isArrayType())   // 这才是决定那个0的原因，但如果是多维数组可能有问题？
         fprintf(yyout, "%s, %s %s, i64 0, ", src_type.substr(0, src_type.length() - 1).c_str(), src_type.c_str(), src.c_str());
     else
         fprintf(yyout, "%s, %s %s, ", src_type.substr(0, src_type.length() - 1).c_str(), src_type.c_str(), src.c_str());
@@ -530,7 +530,7 @@ MachineOperand* Instruction::genMachineOperand(Operand* ope)
             mope = new MachineOperand(MachineOperand::IMM, dynamic_cast<ConstantSymbolEntry*>(se)->getValueInt());
         else
             mope = new MachineOperand(MachineOperand::IMM, dynamic_cast<ConstantSymbolEntry*>(se)->getValueFloat());
-    }else if(se->isTemporary() && !se->getType()->isPtrType())
+    }else if(se->isTemporary() && !(se->getType()->isPtrType() && ((PointerType*)se->getType())->isArray()))
         mope = new MachineOperand(MachineOperand::VREG, dynamic_cast<TemporarySymbolEntry*>(se)->getLabel());
     else if(se->isVariable() 
             || (se->isConstant() && !se->getType()->isNumber())
@@ -1090,20 +1090,23 @@ void GetElementPtrInstruction::genMachineCode(AsmBuilder* builder){
     bool isLastLevel = ((PointerType*)operands[0]->getType())->getValueType()->isNumber();
     auto num = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
     Operand* tempOp;
-    // if(isLastLevel)
-        tempOp = operands[0];
-    // else
-    //     tempOp = new Operand(*operands[0]);
+    tempOp = operands[0];
     tempOp->setEntry(num);
     MachineOperand* dst = genMachineOperand(tempOp);
     MachineOperand* src = genMachineOperand(operands[1]);
-    if(src->isImm())
+    // bool isImmSrc = src->isImm();
+    bool isLabel = src->isLabel();
+    bool isParam = arr->isVariable() && arr->isParam();
+    bool isGlb = arr->isGlobal();
+    // 对于全局数组，src可能是bridge
+    if(src->isImm() || src->isLabel())
     {
         auto internal_reg = genMachineVReg();
         cur_inst = new LoadMInstruction(cur_block, internal_reg, src);
         cur_block->InsertInst(cur_inst);
         src = new MachineOperand(*internal_reg);
     }
+
     MachineOperand* opDim = genMachineOperand(dim);
     if(opDim->isImm()){
         auto internal_reg = genMachineVReg();
@@ -1128,7 +1131,8 @@ void GetElementPtrInstruction::genMachineCode(AsmBuilder* builder){
     cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD, dst, src, opDim);
     cur_block->InsertInst(cur_inst);
     // 到了最后一层了，我们最终的目的是和fp一起算出正确的位置
-    if(isLastLevel){
+    // 但是全局的不用，传参进来的也不用
+    if(isLastLevel && !isLabel && !isParam && !isGlb){
         auto fp = genMachineReg(11);
         cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD, dst, fp, dst);
         cur_block->InsertInst(cur_inst);

@@ -158,7 +158,7 @@ void ArrayDef::getArrayDefCode(int idx, Operand* defOp, Type* toTrim, bool check
         auto addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
         auto addr = new Operand(addr_se); 
         auto dimOp = new Operand(new ConstantSymbolEntry(TypeSystem::longIntType, (int)i));
-        new GetElementPtrInstruction(addr, defOp, dimOp, bb);
+        new GetElementPtrInstruction(addr, defOp, dimOp, bb, flag.arrayIdStk.top());
         arrDstVec.push_back(addr);
         getArrayDefCode(idx + 1, arrDstVec.back(), trim, i != 0);
     }
@@ -507,7 +507,7 @@ void Id::genCode()
         auto p = new PointerType(((ArrayType*)(symbolEntry->getType()))->getElementType()); // 不要直接把new的对象写在实参里
         auto se = new TemporarySymbolEntry(p, SymbolTable::getLabel());
         dst = new Operand(se);
-        new GetElementPtrInstruction(dst, addr, dim, bb);
+        new GetElementPtrInstruction(dst, addr, dim, bb, (IdentifierSymbolEntry*)symbolEntry);
     }
 
     // 不是最外层的ID是不能调用的，因为比如a==5是不行的
@@ -615,7 +615,10 @@ void DeclStmt::genCode()
             Operand *addr;
             SymbolEntry *addr_se;
             addr_se = new IdentifierSymbolEntry(*se);
-            addr_se->setType(new PointerType(se->getType()));
+            if(se->getType()->isArrayType())
+                addr_se->setType(new PointerType(se->getType(), false, true));
+            else
+                addr_se->setType(new PointerType(se->getType()));
             addr = new Operand(addr_se);
             se->setAddr(addr);
             //q6在全局区添加系统函数声明和全局变量
@@ -650,7 +653,10 @@ void DeclStmt::genCode()
             Type *type;
             
             if(se->isLocal()){
-                type = new PointerType(se->getType());
+                if(!se->getType()->isArrayType())
+                    type = new PointerType(se->getType());
+                else
+                    type = new PointerType(se->getType(), false, true);
                 //普通局部变量，只需要一个新的label，分配一个空间即可
                 addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
                 addr = new Operand(addr_se); 
@@ -659,7 +665,7 @@ void DeclStmt::genCode()
             if(se->isParam()){
                 auto seType = se->getType();
                 if(seType->isArrayType()){
-                    seType = new PointerType(((ArrayType*)seType)->getElementType());
+                    seType = new PointerType(((ArrayType*)seType)->getElementType());   //这个地方arr不能是true，genMachineOp有错
                 }
                 type = new PointerType(seType);
                 //形参需要一个label用于传参时写入
@@ -876,7 +882,7 @@ void DimArray::genCode() {
     BasicBlock *bb = builder->getInsertBB();
 
     auto trim = ((ArrayType*)flag.arrayIdStk.top()->getType())->getTrimType();
-    auto type = new PointerType(trim);//这里应该剥壳一层
+    auto type = new PointerType(trim, false, true);//这里应该剥壳一层
     auto addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
     auto addr = new Operand(addr_se); 
     Operand* lastAddr;
@@ -894,9 +900,9 @@ void DimArray::genCode() {
             }else{
                 target = p;
             }
-            new GetElementPtrInstruction(addr, target, dimList[i]->getOperand(), bb);
+            new GetElementPtrInstruction(addr, target, dimList[i]->getOperand(), bb, flag.arrayIdStk.top());
         }else{
-            new GetElementPtrInstruction(addr, lastAddr, dimList[i]->getOperand(), bb);
+            new GetElementPtrInstruction(addr, lastAddr, dimList[i]->getOperand(), bb, flag.arrayIdStk.top());
         }
         lastAddr = addr;
         if(i == dimList.size() - 1){
@@ -904,7 +910,7 @@ void DimArray::genCode() {
             return;
         }
         trim = ((ArrayType*)trim)->getTrimType();
-        type = new PointerType(trim);     //这里应该剥壳一层
+        type = new PointerType(trim, false, true);     //这里应该剥壳一层
         addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
         addr = new Operand(addr_se); 
     }
@@ -928,14 +934,14 @@ void ArrayDef::genCode() {
                 builder->getUnit()->getGlbIds().push_back(flag.arrayIdStk.top());
             // 拷贝到栈区中
             // 在genMachineOperand的时候无法区分的根本原因在于，Pointer其实有两种，一种是指向栈上空间的，一种是指全局区的
-            auto tmpEntryStk = new TemporarySymbolEntry(new PointerType(TypeSystem::shortIntType), SymbolTable::getLabel());
+            auto tmpEntryStk = new TemporarySymbolEntry(new PointerType(TypeSystem::shortIntType, false, true), SymbolTable::getLabel());
             auto opStk = new Operand(tmpEntryStk);
             new BitCastInstruction(opStk, flag.arrayIdStk.top()->getAddr(), bb);    // src的类型是array
-            auto tmpEntryGlb = new TemporarySymbolEntry(new PointerType(TypeSystem::shortIntType), SymbolTable::getLabel());
+            auto tmpEntryGlb = new TemporarySymbolEntry(new PointerType(TypeSystem::shortIntType, false, true), SymbolTable::getLabel());
             auto opGlb = new Operand(tmpEntryGlb);
             // ((PointerType*)flag.arrayIdStk.top()->getType())->setGlobal();  // 可能导致崩溃
             auto name = new IdentifierSymbolEntry(*flag.arrayIdStk.top());
-            name->setType(new PointerType(name->getType(), true));    // src的类型是pointer
+            name->setType(new PointerType(name->getType(), true, true));    // src的类型是pointer
             auto opName = new Operand(name);
             new BitCastInstruction(opGlb, opName, bb);
             //调用memcpy函数
@@ -955,7 +961,7 @@ void ArrayDef::genCode() {
             new FunctionCallInstuction(opDst, ops, (IdentifierSymbolEntry*)toCall, bb);
 
         }else if(arrDefList.empty()){
-            auto tmpEntry = new TemporarySymbolEntry(new PointerType(TypeSystem::shortIntType), SymbolTable::getLabel());
+            auto tmpEntry = new TemporarySymbolEntry(new PointerType(TypeSystem::shortIntType, false, true), SymbolTable::getLabel());
             auto op = new Operand(tmpEntry);
             new BitCastInstruction(op, flag.arrayIdStk.top()->getAddr(), bb);
             std::vector<Operand*> ops;

@@ -586,10 +586,15 @@ void MachineUnit::PrintGlobalDecl()
                 fprintf(yyout, "\t.align 4\n");
                 fprintf(yyout,"\t.size %s, 4\n", var->toAsmStr().c_str());
                 fprintf(yyout,"%s:\n", var->toAsmStr().c_str());
-                // TODO: 待将所有的数组元素初始值保存下来后填充
+                // 待将所有的数组元素初始值保存下来后填充
+                // 这里一定是元数个数不等于零
                 if(((ArrayType*)var->getType())->getElementType()->isInt()) {
-                    for (auto value: var->getArrExpr()) {
-                        fprintf(yyout, "\t.word %d\n", ((ConstantSymbolEntry*)value->getSymPtr())->getValueInt());
+                    if(!var->getArrExpr().empty())
+                        for (auto value: var->getArrExpr()) {
+                            fprintf(yyout, "\t.word %d\n", ((ConstantSymbolEntry*)value->getSymPtr())->getValueInt());
+                        }
+                    else{
+                        fprintf(yyout,"\t.zero %d\n", ((ArrayType*)var->getType())->getCntEleNum() * 4);
                     }
                 }
                 else {
