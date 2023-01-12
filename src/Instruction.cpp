@@ -621,7 +621,7 @@ void LoadInstruction::genMachineCode(AsmBuilder* builder)
             cur_inst = new LoadMInstruction(cur_block, internal_reg1, src);
             cur_block->InsertInst(cur_inst);
             // example: load r1, [r0]
-            cur_inst = new LoadMInstruction(cur_block, dst, internal_reg2);
+            cur_inst = new LoadMInstruction(cur_block, dst, internal_reg2, nullptr, LoadMInstruction::VLDR);
             cur_block->InsertInst(cur_inst);
         }
         else
@@ -643,21 +643,39 @@ void LoadInstruction::genMachineCode(AsmBuilder* builder)
     && operands[1]->getDef()
     && operands[1]->getDef()->isAlloc())
     {
-        // example: load r1, [r0, #4]
-        auto dst = genMachineOperand(operands[0]);
-        auto src1 = genMachineReg(11);
-        auto src2 = genMachineImm(dynamic_cast<TemporarySymbolEntry*>(operands[1]->getEntry())->getOffset());
-        cur_inst = new LoadMInstruction(cur_block, dst, src1, src2);
-        cur_block->InsertInst(cur_inst);
+        if(operands[0]->getType()->isFloat()){
+            auto dst = genMachineOperand(operands[0]);
+            auto src1 = genMachineReg(11);
+            auto src2 = genMachineImm(dynamic_cast<TemporarySymbolEntry*>(operands[1]->getEntry())->getOffset());
+            cur_inst = new LoadMInstruction(cur_block, dst, src1, src2, LoadMInstruction::VLDR);
+            cur_block->InsertInst(cur_inst);
+        }
+        else{
+            // example: load r1, [r0, #4]
+            auto dst = genMachineOperand(operands[0]);
+            auto src1 = genMachineReg(11);
+            auto src2 = genMachineImm(dynamic_cast<TemporarySymbolEntry*>(operands[1]->getEntry())->getOffset());
+            cur_inst = new LoadMInstruction(cur_block, dst, src1, src2);
+            cur_block->InsertInst(cur_inst);
+        }
+
     }
     // Load operand from temporary variable
     else
     {
-        // example: load r1, [r0]
-        auto dst = genMachineOperand(operands[0]);
-        auto src = genMachineOperand(operands[1]);
-        cur_inst = new LoadMInstruction(cur_block, dst, src);
-        cur_block->InsertInst(cur_inst);
+        if(operands[0]->getType()->isFloat()){
+            auto dst = genMachineOperand(operands[0]);
+            auto src = genMachineOperand(operands[1]);
+            cur_inst = new LoadMInstruction(cur_block, dst, src, nullptr, LoadMInstruction::VLDR);
+            cur_block->InsertInst(cur_inst);
+        }
+        else{
+            // example: load r1, [r0]
+            auto dst = genMachineOperand(operands[0]);
+            auto src = genMachineOperand(operands[1]);
+            cur_inst = new LoadMInstruction(cur_block, dst, src);
+            cur_block->InsertInst(cur_inst);
+        }
     }
 }
 
@@ -814,78 +832,123 @@ void BinaryInstruction::genMachineCode(AsmBuilder* builder)
     auto dst = genMachineOperand(operands[0]);
     auto src1 = genMachineOperand(operands[1]);
     auto src2 = genMachineOperand(operands[2]);
-    /* HINT:
-    * The source operands of ADD instruction in ir code both can be immediate num.
-    * However, it's not allowed in assembly code.
-    * So you need to insert LOAD/MOV instrucrion to load immediate num into register.
-    * As to other instructions, such as MUL, CMP, you need to deal with this situation, too.*/
     MachineInstruction* cur_inst = nullptr;
-    if(src1->isImm())
-    {
-        auto internal_reg = genMachineVReg();
-        cur_inst = new LoadMInstruction(cur_block, internal_reg, src1);
-        cur_block->InsertInst(cur_inst);
-        src1 = new MachineOperand(*internal_reg);
-    }
-    if(src2->isOverFlowImm() || ((opcode == MUL || opcode == MOD || opcode == DIV ) && src2->isImm())){
-        auto internal_reg = genMachineVReg();
-        cur_inst = new LoadMInstruction(cur_block, internal_reg, src2);
-        cur_block->InsertInst(cur_inst);
-        src2 = new MachineOperand(*internal_reg);
-    }
-    auto op1 = genMachineReg(0);
-    auto op2 = genMachineReg(1);
-    switch (opcode)
-    {
-    case ADD:
-        cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD, dst, src1, src2);
-        break;
-    case SUB:
-        cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::SUB, dst, src1, src2);
-        break;
-    case MUL:
-        cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::MUL, dst, src1, src2);
-        break;
-    case DIV:
-        // cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, op1, src1);
-        // cur_block->InsertInst(cur_inst);
-        // cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, op2, src2);
-        // cur_block->InsertInst(cur_inst);
-        cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::DIV, dst, src1, src2);
-        // cur_block->InsertInst(cur_inst);
-        // cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, op1);
-        break;
-    case MOD:
-        // cur_inst = new LoadMInstruction(cur_block, op1, src1);
-        // cur_block->InsertInst(cur_inst);
-        // cur_inst = new LoadMInstruction(cur_block, op2, src2);
-        // cur_block->InsertInst(cur_inst);
-        // cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::MOD, dst, src1, src2);
-        // cur_block->InsertInst(cur_inst);
-        // cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, op2);
-        // a % b = a - a / b * b
+    if(operands[1]->getType()->isFloat()){
+        if(src1->isImm())
         {
-            cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::DIV, dst, src1, src2);
-            MachineOperand *dst1 = new MachineOperand(*dst);
-            src1 = new MachineOperand(*src1);
-            src2 = new MachineOperand(*src2);
+            auto temp_reg = genMachineVReg(true);
+            auto internal_reg = genMachineVReg();
+            cur_inst = new LoadMInstruction(cur_block, internal_reg, src1);
             cur_block->InsertInst(cur_inst);
-            cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::MUL, dst1, dst, src2);
+            internal_reg = new MachineOperand(*internal_reg);
+            cur_inst = new MovMInstruction(cur_block, MovMInstruction::VMOV,temp_reg, internal_reg);
             cur_block->InsertInst(cur_inst);
-            dst = new MachineOperand(*dst1);
-            cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::SUB, dst, src1, dst1);
+            src1 = new MachineOperand(*temp_reg);
         }
-        break;
-    case AND:
-        cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::AND, dst, src1, src2);
-        break;
-    case OR:
-        cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::OR, dst, src1, src2);
-        break;
-    default:
-        break;
+        if(src2->isImm())
+        {
+            auto temp_reg = genMachineVReg(true);
+            auto internal_reg = genMachineVReg();
+            cur_inst = new LoadMInstruction(cur_block, internal_reg, src2);
+            cur_block->InsertInst(cur_inst);
+            internal_reg = new MachineOperand(*internal_reg);
+            cur_inst = new MovMInstruction(cur_block, MovMInstruction::VMOV,temp_reg, internal_reg);
+            cur_block->InsertInst(cur_inst);
+            src2 = new MachineOperand(*temp_reg);
+        }
+        switch (opcode)
+        {
+        case ADD:
+            cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::VADD, dst, src1, src2);
+            break;
+        case SUB:
+            cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::VSUB, dst, src1, src2);
+            break;
+        case MUL:
+            cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::VMUL, dst, src1, src2);
+            break;
+        case DIV:
+            cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::VDIV, dst, src1, src2);
+            break;
+        default:
+            break;
+        }
+        cur_block->InsertInst(cur_inst);
     }
-    cur_block->InsertInst(cur_inst);
+    else{
+        
+        /* HINT:
+        * The source operands of ADD instruction in ir code both can be immediate num.
+        * However, it's not allowed in assembly code.
+        * So you need to insert LOAD/MOV instrucrion to load immediate num into register.
+        * As to other instructions, such as MUL, CMP, you need to deal with this situation, too.*/
+        if(src1->isImm())
+        {
+            auto internal_reg = genMachineVReg();
+            cur_inst = new LoadMInstruction(cur_block, internal_reg, src1);
+            cur_block->InsertInst(cur_inst);
+            src1 = new MachineOperand(*internal_reg);
+        }
+        if(src2->isOverFlowImm() || ((opcode == MUL || opcode == MOD || opcode == DIV ) && src2->isImm())){
+            auto internal_reg = genMachineVReg();
+            cur_inst = new LoadMInstruction(cur_block, internal_reg, src2);
+            cur_block->InsertInst(cur_inst);
+            src2 = new MachineOperand(*internal_reg);
+        }
+        // auto op1 = genMachineReg(0);
+        // auto op2 = genMachineReg(1);
+        switch (opcode)
+        {
+        case ADD:
+            cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD, dst, src1, src2);
+            break;
+        case SUB:
+            cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::SUB, dst, src1, src2);
+            break;
+        case MUL:
+            cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::MUL, dst, src1, src2);
+            break;
+        case DIV:
+            // cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, op1, src1);
+            // cur_block->InsertInst(cur_inst);
+            // cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, op2, src2);
+            // cur_block->InsertInst(cur_inst);
+            cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::DIV, dst, src1, src2);
+            // cur_block->InsertInst(cur_inst);
+            // cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, op1);
+            break;
+        case MOD:
+            // cur_inst = new LoadMInstruction(cur_block, op1, src1);
+            // cur_block->InsertInst(cur_inst);
+            // cur_inst = new LoadMInstruction(cur_block, op2, src2);
+            // cur_block->InsertInst(cur_inst);
+            // cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::MOD, dst, src1, src2);
+            // cur_block->InsertInst(cur_inst);
+            // cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, op2);
+            // a % b = a - a / b * b
+            {
+                cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::DIV, dst, src1, src2);
+                MachineOperand *dst1 = new MachineOperand(*dst);
+                src1 = new MachineOperand(*src1);
+                src2 = new MachineOperand(*src2);
+                cur_block->InsertInst(cur_inst);
+                cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::MUL, dst1, dst, src2);
+                cur_block->InsertInst(cur_inst);
+                dst = new MachineOperand(*dst1);
+                cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::SUB, dst, src1, dst1);
+            }
+            break;
+        case AND:
+            cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::AND, dst, src1, src2);
+            break;
+        case OR:
+            cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::OR, dst, src1, src2);
+            break;
+        default:
+            break;
+        }
+        cur_block->InsertInst(cur_inst);
+    }
 }
 
 void CmpInstruction::genMachineCode(AsmBuilder* builder)
