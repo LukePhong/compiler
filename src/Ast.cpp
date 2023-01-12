@@ -30,7 +30,8 @@ struct flags{
     std::stack<int> cntEle;
 
     std::stringstream arrayDefString;
-    IdentifierSymbolEntry* arrayId;
+    // IdentifierSymbolEntry* arrayId;
+    std::stack<IdentifierSymbolEntry*> arrayIdStk;
     std::stack<std::vector<ArrayDef*>::iterator> arrDefIterStk;
     std::vector<ExprNode*>::iterator dimListIter;
     bool isOuterArrDecl = false;
@@ -78,15 +79,20 @@ ExprNode* getNextExprInArrDef(){
     准确的返回内存中树的下一个没有被打印过的值，于是我们能够打印出理想的满树对应的字符串
 */
 void getArrayDefStr(int idx, bool checkTop = false){
-    auto dims = ((ArrayType*)flag.arrayId->getType())->getDimList();
-    auto p = ((ArrayType*)flag.arrayId->getType());
+    auto dims = ((ArrayType*)flag.arrayIdStk.top()->getType())->getDimList();
+    auto p = ((ArrayType*)flag.arrayIdStk.top()->getType());
     if(idx == dims.size()){
         auto& top = flag.arrDefIterStk.top();
+        ExprNode* e;
         if(checkTop && !(*top.base())){   //这样就可以补零了
             flag.arrayDefString<<"0";
+            e = new Constant(new ConstantSymbolEntry(p->getElementType(), 0));
         }else{
-            flag.arrayDefString<<((ConstantSymbolEntry*)getNextExprInArrDef()->getSymbolEntry())->genStr(p->getElementType());
+            e = getNextExprInArrDef();
+            flag.arrayDefString<<((ConstantSymbolEntry*)e->getSymbolEntry())->genStr(p->getElementType());
+            // flag.arrayIdStk.top()->addArrExpr(e);
         }
+        flag.arrayIdStk.top()->addArrExpr(e);
         return;
     }
     flag.arrayDefString<<"[";
@@ -101,6 +107,64 @@ void getArrayDefStr(int idx, bool checkTop = false){
     flag.arrayDefString<<"]";
 }
 
+/*void DimArray::genCode() {
+
+    BasicBlock *bb = builder->getInsertBB();
+
+    auto trim = ((ArrayType*)flag.arrayId->getType())->getTrimType();
+    auto type = new PointerType(trim);//这里应该剥壳一层
+    auto addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
+    auto addr = new Operand(addr_se); 
+    Operand* lastAddr;
+    for (size_t i = 0; i < dimList.size(); i++)
+    {
+        dimList[i]->genCode();
+        new GetElementPtrInstruction(addr, i == 0 ? flag.arrayId->getAddr() : lastAddr, dimList[i]->getOperand(), bb);
+        lastAddr = addr;
+        if(i == dimList.size() - 1){
+            dst = lastAddr;
+            return;
+        }
+        trim = ((ArrayType*)trim)->getTrimType();
+        type = new PointerType(trim);     //这里应该剥壳一层
+        addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
+        addr = new Operand(addr_se); 
+    }
+    dst = lastAddr;
+}*/
+
+void ArrayDef::getArrayDefCode(int idx, Operand* defOp, Type* toTrim, bool checkTop){
+    BasicBlock *bb = builder->getInsertBB();
+    auto dims = ((ArrayType*)flag.arrayIdStk.top()->getType())->getDimList();
+    auto p = ((ArrayType*)flag.arrayIdStk.top()->getType());
+    if(idx == dims.size()){
+        auto& top = flag.arrDefIterStk.top();
+        if(checkTop && !(*top.base())){   //这样就可以补零了
+            // flag.arrayDefString<<"0";
+            // auto e = new Constant(new ConstantSymbolEntry(p->getElementType(), 0));
+            ;
+        }else{
+            auto e = getNextExprInArrDef();
+            e->genCode();
+            new StoreInstruction(defOp, e->getOperand(), bb);
+        }
+        return;
+    }
+    int dimNum = ((ConstantSymbolEntry*)dims[idx]->getSymbolEntry())->getValueInt();
+    auto trim = ((ArrayType*)toTrim)->getTrimType();
+    auto type = new PointerType(trim);//这里应该剥壳一层
+    for (size_t i = 0; i < dimNum; i++)
+    {
+        auto addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
+        auto addr = new Operand(addr_se); 
+        auto dimOp = new Operand(new ConstantSymbolEntry(TypeSystem::longIntType, (int)i));
+        new GetElementPtrInstruction(addr, defOp, dimOp, bb, flag.arrayIdStk.top());
+        arrDstVec.push_back(addr);
+        getArrayDefCode(idx + 1, arrDstVec.back(), trim, i != 0);
+    }
+}
+
+/*============================AST NODE FUNCS=============================================*/
 Node::Node()
 {
     seq = counter++;
@@ -432,7 +496,19 @@ void Id::genCode()
     BasicBlock *bb = builder->getInsertBB();
     Function *func = bb->getParent();
     Operand *addr = dynamic_cast<IdentifierSymbolEntry*>(symbolEntry)->getAddr();
-    new LoadInstruction(dst, addr, bb);
+    // 现在数组的Operand并不是数组类型而是指针类型
+    if(!((IdentifierSymbolEntry*)symbolEntry)->getType()->isArrayType())
+        new LoadInstruction(dst, addr, bb);
+    else{
+        // 为函数传入数组的情况
+        auto dim = new Operand(new ConstantSymbolEntry(TypeSystem::intType, 0));
+        // auto se = new IdentifierSymbolEntry(*(IdentifierSymbolEntry*)symbolEntry);
+        // se->setType(new PointerType(((ArrayType*)(symbolEntry->getType()))->getElementType()));
+        auto p = new PointerType(((ArrayType*)(symbolEntry->getType()))->getElementType()); // 不要直接把new的对象写在实参里
+        auto se = new TemporarySymbolEntry(p, SymbolTable::getLabel());
+        dst = new Operand(se);
+        new GetElementPtrInstruction(dst, addr, dim, bb, (IdentifierSymbolEntry*)symbolEntry);
+    }
 
     // 不是最外层的ID是不能调用的，因为比如a==5是不行的
     if(flag.isUnderCond && flag.isOuterCond){
@@ -529,28 +605,40 @@ void DeclStmt::genCode()
     int cnt = 0;
     for (const auto id:idList){
         IdentifierSymbolEntry *se = dynamic_cast<IdentifierSymbolEntry *>(id->getSymPtr());
+        // 保证后续关于数组的判断可以正常进行
+        if(se->getType()->isArrayType()){
+            se->setArray();
+            se->setArrayType(((ArrayType*)se->getType()));
+        }
         if(se->isGlobal())
         {
             Operand *addr;
             SymbolEntry *addr_se;
             addr_se = new IdentifierSymbolEntry(*se);
-            addr_se->setType(new PointerType(se->getType()));
+            if(se->getType()->isArrayType())
+                addr_se->setType(new PointerType(se->getType(), false, true));
+            else
+                addr_se->setType(new PointerType(se->getType()));
             addr = new Operand(addr_se);
             se->setAddr(addr);
             //q6在全局区添加系统函数声明和全局变量
             if(exprList[cnt]){
-                exprList[cnt]->genCode();
+                // 运算出现在全局区
+                if(bb){
+                    // continue;    
+                    exprList[cnt]->genCode();
+                }
                 se->setGlbConst(exprList[cnt]->getSymbolEntry());
             }else if(defArrList[cnt]){
                 //q13添加数组IR支持
                 ((ArrayType*)idList[cnt]->getSymbolEntry()->getType())->countEleNum();
                 ((ArrayType*)idList[cnt]->getSymbolEntry()->getType())->genDimTypeStrings();
-                flag.arrayId = ((IdentifierSymbolEntry*)idList[cnt]->getSymbolEntry());
-                flag.dimListIter = ((ArrayType*)flag.arrayId->getType())->getDimList().begin();
+                flag.arrayIdStk.push(((IdentifierSymbolEntry*)idList[cnt]->getSymbolEntry()));
+                flag.dimListIter = ((ArrayType*)flag.arrayIdStk.top()->getType())->getDimList().begin();
                 flag.isOuterArrDecl = true;
                 defArrList[cnt]->genCode();
-                builder->getUnit()->getGlbIds().push_back(flag.arrayId);
-                flag.arrayId = nullptr;
+                builder->getUnit()->getGlbIds().push_back(flag.arrayIdStk.top());
+                flag.arrayIdStk.pop();
                 continue;
             }
             builder->getUnit()->getGlbIds().push_back(se);
@@ -563,13 +651,23 @@ void DeclStmt::genCode()
             Instruction *alloca;
             SymbolEntry *addr_se;
             Type *type;
-            type = new PointerType(se->getType());
+            
             if(se->isLocal()){
+                if(!se->getType()->isArrayType())
+                    type = new PointerType(se->getType());
+                else
+                    type = new PointerType(se->getType(), false, true);
                 //普通局部变量，只需要一个新的label，分配一个空间即可
                 addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
                 addr = new Operand(addr_se); 
+                alloca = new AllocaInstruction(addr, se);                   // allocate space for local id in function stack.
             }
             if(se->isParam()){
+                auto seType = se->getType();
+                if(seType->isArrayType()){
+                    seType = new PointerType(((ArrayType*)seType)->getElementType());   //这个地方arr不能是true，genMachineOp有错
+                }
+                type = new PointerType(seType);
                 //形参需要一个label用于传参时写入
                 // addr_se = new TemporarySymbolEntry(se->getType(), flag.cntParam);
                 // addr_se = new IdentifierSymbolEntry(*se);
@@ -580,12 +678,20 @@ void DeclStmt::genCode()
                 func->addLabelParam(flag.cntParam);
                 //另一个label，分配一片空间
                 auto tempPtr = new TemporarySymbolEntry(type, SymbolTable::getLabel());
-                auto srcParam = new Operand(se);
                 addr = new Operand(tempPtr); 
+                Operand* srcParam;
+                if(se->getType()->isArrayType()){
+                    auto seTarget = new IdentifierSymbolEntry(*se);
+                    seTarget->setType(seType);
+                    srcParam = new Operand(seTarget);
+                    alloca = new AllocaInstruction(addr, seTarget);
+                }else{
+                    srcParam = new Operand(se);
+                    alloca = new AllocaInstruction(addr, se);
+                }
                 //把形参的值存入另一个label指向的空间中
                 new StoreInstruction(addr, srcParam, bb);
             }
-            alloca = new AllocaInstruction(addr, se);                   // allocate space for local id in function stack.
             entry->insertFront(alloca);                                 // allocate instructions should be inserted into the begin of the entry block.
             se->setAddr(addr);                                          // set the addr operand in symbol entry so that we can use it in subsequent code generation.
 
@@ -593,6 +699,7 @@ void DeclStmt::genCode()
                 //q13添加数组IR支持
                 ((ArrayType*)idList[cnt]->getSymbolEntry()->getType())->countEleNum();
                 ((ArrayType*)idList[cnt]->getSymbolEntry()->getType())->genDimTypeStrings();
+                ((IdentifierSymbolEntry*)se)->setNameOfFunc(((IdentifierSymbolEntry*)func->getSymPtr())->toStr());
             }
 
             auto expr = exprList[cnt];
@@ -602,11 +709,11 @@ void DeclStmt::genCode()
                 src = typeConvention(se->getType(), src, bb);
                 new StoreInstruction(addr, src, bb);
             }else if(defArrList[cnt]){
-                flag.arrayId = ((IdentifierSymbolEntry*)idList[cnt]->getSymbolEntry());
-                flag.dimListIter = ((ArrayType*)flag.arrayId->getType())->getDimList().begin();
+                flag.arrayIdStk.push(((IdentifierSymbolEntry*)idList[cnt]->getSymbolEntry()));
+                flag.dimListIter = ((ArrayType*)flag.arrayIdStk.top()->getType())->getDimList().begin();
                 flag.isOuterArrDecl = true;
                 defArrList[cnt]->genCode();
-                flag.arrayId = nullptr;
+                flag.arrayIdStk.pop();
             }
         }
         cnt++;
@@ -674,7 +781,8 @@ void FuncCall::genCode() {
     {
         i->genCode();
         Operand* dst = i->getOperand();
-        dst = typeConvention(paramTypes[cnt], dst, bb);
+        if(dst->getType()->isNumber())
+            dst = typeConvention(paramTypes[cnt], dst, bb);
         params.push_back(dst);
         cnt++;
     }
@@ -773,22 +881,36 @@ void DimArray::genCode() {
 
     BasicBlock *bb = builder->getInsertBB();
 
-    auto trim = ((ArrayType*)flag.arrayId->getType())->getTrimType();
-    auto type = new PointerType(trim);//这里应该剥壳一层
+    auto trim = ((ArrayType*)flag.arrayIdStk.top()->getType())->getTrimType();
+    auto type = new PointerType(trim, false, true);//这里应该剥壳一层
     auto addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
     auto addr = new Operand(addr_se); 
     Operand* lastAddr;
     for (size_t i = 0; i < dimList.size(); i++)
     {
         dimList[i]->genCode();
-        new GetElementPtrInstruction(addr, i == 0 ? flag.arrayId->getAddr() : lastAddr, dimList[i]->getOperand(), bb);
+        if(i==0){
+            auto p = flag.arrayIdStk.top()->getAddr();
+            Operand* target;
+            auto pType = ((PointerType*)p->getType());
+            if(pType->isMultiPtr()){
+                auto pTempSe = new TemporarySymbolEntry(pType->getValueType(), SymbolTable::getLabel());
+                target = new Operand(pTempSe); 
+                new LoadInstruction(target, p, bb);
+            }else{
+                target = p;
+            }
+            new GetElementPtrInstruction(addr, target, dimList[i]->getOperand(), bb, flag.arrayIdStk.top());
+        }else{
+            new GetElementPtrInstruction(addr, lastAddr, dimList[i]->getOperand(), bb, flag.arrayIdStk.top());
+        }
         lastAddr = addr;
         if(i == dimList.size() - 1){
             dst = lastAddr;
             return;
         }
         trim = ((ArrayType*)trim)->getTrimType();
-        type = new PointerType(trim);     //这里应该剥壳一层
+        type = new PointerType(trim, false, true);     //这里应该剥壳一层
         addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
         addr = new Operand(addr_se); 
     }
@@ -804,15 +926,44 @@ void ArrayDef::genCode() {
         if(!arrDefList.empty() && isAllDefined(cnt)){
             flag.arrDefIterStk.push(arrDefList.begin());
             getArrayDefStr(0);
-            flag.arrayId->setArrDefStr(flag.arrayDefString.str());
+            flag.arrayIdStk.top()->setArrDefStr(flag.arrayDefString.str());
             flag.arrayDefString.clear();    // 清空流
             flag.arrayDefString.str("");
             std::stack<std::vector<ArrayDef*>::iterator>().swap(flag.arrDefIterStk);
-            builder->getUnit()->getGlbIds().push_back(flag.arrayId);
+            if(flag.arrayIdStk.top()->isLocal())
+                builder->getUnit()->getGlbIds().push_back(flag.arrayIdStk.top());
+            // 拷贝到栈区中
+            // 在genMachineOperand的时候无法区分的根本原因在于，Pointer其实有两种，一种是指向栈上空间的，一种是指全局区的
+            auto tmpEntryStk = new TemporarySymbolEntry(new PointerType(TypeSystem::shortIntType, false, true), SymbolTable::getLabel());
+            auto opStk = new Operand(tmpEntryStk);
+            new BitCastInstruction(opStk, flag.arrayIdStk.top()->getAddr(), bb);    // src的类型是array
+            auto tmpEntryGlb = new TemporarySymbolEntry(new PointerType(TypeSystem::shortIntType, false, true), SymbolTable::getLabel());
+            auto opGlb = new Operand(tmpEntryGlb);
+            // ((PointerType*)flag.arrayIdStk.top()->getType())->setGlobal();  // 可能导致崩溃
+            auto name = new IdentifierSymbolEntry(*flag.arrayIdStk.top());
+            name->setType(new PointerType(name->getType(), true, true));    // src的类型是pointer
+            auto opName = new Operand(name);
+            new BitCastInstruction(opGlb, opName, bb);
+            //调用memcpy函数
+            std::vector<Operand*> ops;
+            ops.push_back(opStk);
+            ops.push_back(opGlb);
+            auto c2 = new ConstantSymbolEntry(TypeSystem::longIntType, 32);
+            auto op2 = new Operand(c2);
+            ops.push_back(op2);
+            auto c3 = new ConstantSymbolEntry(TypeSystem::boolType, 0);
+            auto op3 = new Operand(c3);
+            ops.push_back(op3);
+            std::vector<Type*> types{new PointerType(TypeSystem::shortIntType), new PointerType(TypeSystem::shortIntType), TypeSystem::longIntType, TypeSystem::boolType};
+            auto toCall = identifiers->lookup("llvm.memcpy.p0i8.p0i8.i64", types);
+            auto tmpDst = new TemporarySymbolEntry(TypeSystem::voidType, SymbolTable::getLabel());
+            auto opDst = new Operand(tmpDst);
+            new FunctionCallInstuction(opDst, ops, (IdentifierSymbolEntry*)toCall, bb);
+
         }else if(arrDefList.empty()){
-            auto tmpEntry = new TemporarySymbolEntry(new PointerType(TypeSystem::shortIntType), SymbolTable::getLabel());
+            auto tmpEntry = new TemporarySymbolEntry(new PointerType(TypeSystem::shortIntType, false, true), SymbolTable::getLabel());
             auto op = new Operand(tmpEntry);
-            new BitCastInstruction(op, flag.arrayId->getAddr(), bb);
+            new BitCastInstruction(op, flag.arrayIdStk.top()->getAddr(), bb);
             std::vector<Operand*> ops;
             ops.push_back(op);
             auto c1 = new ConstantSymbolEntry(TypeSystem::shortIntType, 0);
@@ -829,6 +980,10 @@ void ArrayDef::genCode() {
             auto tmpDst = new TemporarySymbolEntry(TypeSystem::voidType, SymbolTable::getLabel());
             auto opDst = new Operand(tmpDst);
             new FunctionCallInstuction(opDst, ops, (IdentifierSymbolEntry*)toCall, bb);
+        }else{
+            flag.arrDefIterStk.push(arrDefList.begin());
+            getArrayDefCode(0, flag.arrayIdStk.top()->getAddr(), (ArrayType*)flag.arrayIdStk.top()->getType());
+            std::stack<std::vector<ArrayDef*>::iterator>().swap(flag.arrDefIterStk);
         }
     }else{
         if(expr)
@@ -842,7 +997,7 @@ void ArrayDef::genCode() {
 }
 
 bool ArrayDef::isAllDefined(int& cnt){
-    if(cnt == ((ArrayType*)flag.arrayId->getType())->getCntEleNum())
+    if(cnt == ((ArrayType*)flag.arrayIdStk.top()->getType())->getCntEleNum())
         return true;
     if(expr)
         return false;
@@ -933,9 +1088,9 @@ void ArrayIndex::genCode() {
 
     BasicBlock *bb = builder->getInsertBB();
     Function *func = bb->getParent();
-    flag.arrayId = (IdentifierSymbolEntry*)arrDef;
+    flag.arrayIdStk.push((IdentifierSymbolEntry*)arrDef);
     dim->genCode();
-    flag.arrayId = nullptr;
+    flag.arrayIdStk.pop();
     // Operand *addr = dynamic_cast<IdentifierSymbolEntry*>(arrDef)->getAddr();
     new LoadInstruction(dst, dim->getDst(), bb);
 
@@ -952,9 +1107,9 @@ void ArrayIndex::genCode() {
 void ArrayIndex::genLvalCode()
 {
     BasicBlock *bb = builder->getInsertBB();
-    flag.arrayId = (IdentifierSymbolEntry*)arrDef;
+    flag.arrayIdStk.push((IdentifierSymbolEntry*)arrDef);
     dim->genCode();
-    flag.arrayId = nullptr;
+    flag.arrayIdStk.pop();
     dst = dim->getDst();
 }
 

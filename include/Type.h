@@ -31,15 +31,26 @@ public:
     //判断是否是数字类型
     bool isNumber() { return kind < 3; };
     //p4二元运算类型检查
-    bool isArrayType() { return kind > FUNC; }
+    bool isArrayType() { return kind == ARRAY_INT || kind == ARRAY_FLOAT; }
+    bool isPtrType() { return kind == PTR; }
 };
 
-class IntType : public Type
+class SizedType : public Type
 {
-private:
+protected:
     int size;
 public:
-    IntType(int size) : Type(Type::INT), size(size){};
+    SizedType(int kind, int size) : Type(kind), size(size) {};
+    int getSize() { return size; }
+};
+
+class IntType : public SizedType
+{
+// private:
+    // int size;
+public:
+    // IntType(int size) : Type(Type::INT), size(size){};
+    IntType(int size) : SizedType(Type::INT, size) {};
     std::string toStr();
 };
 
@@ -47,9 +58,18 @@ class PointerType : public Type
 {
 private:
     Type *valueType;
+    bool isGlbPtr = false;
+    bool is4Array = false;
 public:
-    PointerType(Type* valueType) : Type(Type::PTR) {this->valueType = valueType;};
+    PointerType(Type* valueType, bool isGlb = false, bool isArr = false) : Type(Type::PTR), isGlbPtr(isGlb), is4Array(isArr)
+        {this->valueType = valueType;};
     std::string toStr();
+    bool isMultiPtr() { return valueType->isPtrType(); }
+    Type *getValueType() { return valueType; }
+    bool isGlobal() { return isGlbPtr; }
+    void setGlobal() { isGlbPtr = true; }
+    bool isArray() { return is4Array; }
+    void set4Array() { is4Array = true; }
 };
 
 class ArrayType : public Type{
@@ -58,7 +78,7 @@ private:
     Type *elementType;
     int cntEleNum;
     std::vector<std::string> dimTypeStrArray;
-    Type* trimedType = nullptr;
+    Type* trimedType = nullptr;     //如果顺利，这个指针将构成一条链，将从中找到所有的数组类型
 public:
     //如果这里没有eleType的话，使用arrayIntType定义的数组再访问时如果访问到eleType将会是null
     ArrayType(Type::typeKind typeKind, Type *elementType) : Type(typeKind), elementType(elementType){};
@@ -86,12 +106,13 @@ public:
 };
 
 //q6浮点数支持
-class FloatType : public Type
+class FloatType : public SizedType
 {
-private:
-    int size;
+// private:
+    // int size;
 public:
-    FloatType(int size) : Type(Type::FLOAT), size(size){};
+    // FloatType(int size) : Type(Type::FLOAT), size(size){};
+    FloatType(int size) : SizedType(Type::FLOAT, size) {};
     std::string toStr();
 };
 class ArrayFloatType : public ArrayType
@@ -104,12 +125,13 @@ public:
     // Type* getElementType() { return TypeSystem::floatType; };
 };
 
-class BoolType : public Type
+class BoolType : public SizedType
 {
-private:
-    int size;
+// private:
+    // int size;
 public:
-    BoolType(int size) : Type(Type::BOOL), size(size){};
+    // BoolType(int size) : Type(Type::BOOL), size(size){};
+    BoolType(int size) : SizedType(Type::BOOL, size) {};
     std::string toStr();
 };
 

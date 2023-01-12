@@ -74,7 +74,7 @@ protected:
     void addUse(MachineOperand* ope) { use_list.push_back(ope); };
     // Print execution code after printing opcode
     void PrintCond();
-    enum instType { BINARY, LOAD, STORE, MOV, BRANCH, CMP, STACK, ZEXT, VMRS, VCVR};
+    enum instType { BINARY, LOAD, STORE, MOV, BRANCH, CMP, STACK, ZEXT, BTCAST, VMRS, VCVR};
 public:
     enum condType { EQ, NE, LT, LE , GT, GE, NONE };
     virtual void output() = 0;
@@ -88,7 +88,7 @@ public:
 class BinaryMInstruction : public MachineInstruction
 {
 public:
-    enum opType { ADD, SUB, MUL, DIV, MOD, AND, OR, VADD, VSUB, VMUL, VDIV };
+    enum opType { ADD, SUB, MUL, DIV, MOD, AND, OR, VADD, VSUB, VMUL, VDIV, LSL};
     BinaryMInstruction(MachineBlock* p, int op, 
                     MachineOperand* dst, MachineOperand* src1, MachineOperand* src2, 
                     int cond = MachineInstruction::NONE);
@@ -179,6 +179,15 @@ public:
     ZextMInstruction(MachineBlock* p,
                 MachineOperand* dst, MachineOperand* src,
                 int cond = MachineInstruction::NONE);
+    void output();
+};
+
+class BitCastMInstruction : public ZextMInstruction
+{
+public:
+    BitCastMInstruction(MachineBlock* p,
+                MachineOperand* dst, MachineOperand* src,
+                int cond = MachineInstruction::NONE) : ZextMInstruction(p, dst, src, cond) { type = MachineInstruction::BTCAST; };
     void output();
 };
 

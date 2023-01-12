@@ -29,6 +29,7 @@ public:
     Type* getType() {return se->getType();};
     std::string toStr() const;
     SymbolEntry * getEntry() { return se; };
+    void setEntry(SymbolEntry *e) { se = e; };
     Instruction* getDef() { return def; };
     auto getSymbolEntry() { return se; }
 };
