@@ -88,7 +88,7 @@ public:
 class BinaryMInstruction : public MachineInstruction
 {
 public:
-    enum opType { ADD, SUB, MUL, DIV, MOD, AND, OR };
+    enum opType { ADD, SUB, MUL, DIV, MOD, AND, OR, VADD, VSUB, VMUL, VDIV };
     BinaryMInstruction(MachineBlock* p, int op, 
                     MachineOperand* dst, MachineOperand* src1, MachineOperand* src2, 
                     int cond = MachineInstruction::NONE);
