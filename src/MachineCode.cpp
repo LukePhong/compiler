@@ -433,11 +433,11 @@ void BranchMInstruction::output()
 
 CmpMInstruction::CmpMInstruction(MachineBlock* p, 
     MachineOperand* src1, MachineOperand* src2, 
-    int cond)
+    int op, int cond)
 {
     // TODO
     this->parent = p;
-    this->type = MachineInstruction::CMP;
+    this->type = op;
     this->use_list.push_back(src1);
     this->use_list.push_back(src2);
     src1->setParent(this);
@@ -450,11 +450,32 @@ void CmpMInstruction::output()
     // TODO
     // Jsut for reg alloca test
     // delete it after test
-    fprintf(yyout, "\tcmp ");
+    switch (type)
+    {
+    case CmpMInstruction::CMP:
+        fprintf(yyout, "\tcmp ");
+        break;
+    case CmpMInstruction::VCMP:
+        fprintf(yyout, "\tvcmp.f32 ");
+        break;
+    default:
+        break;
+    }
     this->use_list[0]->output();
     fprintf(yyout, ", ");
     this->use_list[1]->output();
     fprintf(yyout, "\n");
+}
+
+VmrsMInstruction::VmrsMInstruction(MachineBlock* p)
+{
+    this->parent = p;
+    this->type = MachineInstruction::VMRS;
+}
+
+void VmrsMInstruction::output()
+{
+    fprintf(yyout, "\tvmrs APSR_nzcv, FPSCR\n");
 }
 
 StackMInstruction::StackMInstruction(MachineBlock* p, int op, 
@@ -608,7 +629,7 @@ void MachineFunction::output()
     }
     if(!fregs.empty()){
         size_t cnt = 0;
-        fprintf(yyout, "\tpush {");
+        fprintf(yyout, "\tvpush {");
         for (auto &&i : fregs)
         {
             fprintf(yyout, "s%d", i-16);
@@ -641,11 +662,23 @@ void MachineFunction::output()
             fprintf(yyout, "\tadd sp, sp, #%d\n", stack_size);
         }
     }
+    if(!fregs.empty()){
+        size_t cnt = 0;
+        fprintf(yyout, "\tvpop {");
+        for (auto &&i : fregs)
+        {
+            fprintf(yyout, "s%d", i-16);
+            if(cnt != fregs.size() - 1)
+                fprintf(yyout, ", ");
+            cnt++;
+        }
+        fprintf(yyout, "}\n");
+    }
     //恢复saved registers和fp
     fprintf(yyout, "\tpop {");
     // cnt = 0;
-    if(!saved_regs.empty()){
-        for (auto &&i : saved_regs)
+    if(!regs.empty()){
+        for (auto &&i : regs)
         {
             fprintf(yyout, "r%d", i);
             // if(cnt != saved_regs.size() - 1)
