@@ -74,7 +74,7 @@ protected:
     void addUse(MachineOperand* ope) { use_list.push_back(ope); };
     // Print execution code after printing opcode
     void PrintCond();
-    enum instType { BINARY, LOAD, STORE, MOV, BRANCH, CMP, STACK, ZEXT};
+    enum instType { BINARY, LOAD, STORE, MOV, BRANCH, CMP, STACK, ZEXT, VMRS};
 public:
     enum condType { EQ, NE, LT, LE , GT, GE, NONE };
     virtual void output() = 0;
@@ -139,10 +139,17 @@ public:
 class CmpMInstruction : public MachineInstruction
 {
 public:
-    enum opType { CMP };
+    enum opType { CMP, VCMP };
     CmpMInstruction(MachineBlock* p, 
                 MachineOperand* src1, MachineOperand* src2, 
-                int cond = MachineInstruction::NONE);
+                int op = CMP, int cond = MachineInstruction::NONE);
+    void output();
+};
+
+class VmrsMInstruction : public MachineInstruction
+{
+public:
+    VmrsMInstruction(MachineBlock* p);
     void output();
 };
 
