@@ -681,7 +681,9 @@ void MachineUnit::PrintGlobalDecl()
                     if(var->getType()->isInt()) {
                         fprintf(yyout, "\t.word %s\n", var->getGlbValue()->toStr().c_str());
                     } else {
-                        ;
+                        auto value = float((var->getGlbValue())->getValueFloat());
+                        uint32_t temp = reinterpret_cast<uint32_t&>(value);
+                        fprintf(yyout, "\t.word %u\n", temp);
                     }
                 }
             }
