@@ -478,6 +478,40 @@ void VmrsMInstruction::output()
     fprintf(yyout, "\tvmrs APSR_nzcv, FPSCR\n");
 }
 
+VcvrMInstruction::VcvrMInstruction(MachineBlock* p, int op,
+                                   MachineOperand* dst,MachineOperand* src,
+                                   int cond)
+{
+    this->parent = p;
+    this->type = MachineInstruction::VCVR;
+    this->op = op;
+    this->cond = cond;
+    this->def_list.push_back(dst);
+    this->use_list.push_back(src);
+    dst->setParent(this);
+    src->setParent(this);
+}
+
+void VcvrMInstruction::output()
+{
+    switch (this->op) {
+        case VcvrMInstruction::F2I:
+            fprintf(yyout, "\tvcvt.s32.f32 ");
+            break;
+        case VcvrMInstruction::I2F:
+            fprintf(yyout, "\tvcvt.f32.s32 ");
+            break;
+        default:
+            break;
+    }
+    PrintCond();
+    fprintf(yyout, " ");
+    this->def_list[0]->output();
+    fprintf(yyout, ", ");
+    this->use_list[0]->output();
+    fprintf(yyout, "\n");
+}
+
 StackMInstruction::StackMInstruction(MachineBlock* p, int op, 
     std::vector<MachineOperand*> src,
     int cond)
