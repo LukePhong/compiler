@@ -1046,7 +1046,7 @@ void CmpInstruction::genMachineCode(AsmBuilder* builder)
             src2 = new MachineOperand(*internal_reg);
         }
 
-        cur_inst = new CmpMInstruction(cur_block, src1, src2, opcode);
+        cur_inst = new CmpMInstruction(cur_block, src1, src2, CmpMInstruction::CMP, opcode);
         cur_block->InsertInst(cur_inst);
 
         //是否需要？
@@ -1337,22 +1337,6 @@ void FunctionCallInstuction::genMachineCode(AsmBuilder* builder){
         cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD, dst, src1, src2);
         cur_block->InsertInst(cur_inst);
     }
-}
-
-void ZextInstruction::genMachineCode(AsmBuilder* builder){
-    MachineBlock* cur_block = builder->getBlock();
-    MachineInstruction* cur_inst = nullptr;
-    MachineOperand* src = genMachineOperand(operands[1]);
-    if(src->isImm())
-    {
-        auto internal_reg = genMachineVReg();
-        cur_inst = new LoadMInstruction(cur_block, internal_reg, src);
-        cur_block->InsertInst(cur_inst);
-        src = new MachineOperand(*internal_reg);
-    }
-    MachineOperand* dst = genMachineOperand(operands[0]);
-    cur_inst = new ZextMInstruction(cur_block, dst, src);
-    cur_block->InsertInst(cur_inst);
 }
 
 void BitCastInstruction::genMachineCode(AsmBuilder* builder){
