@@ -167,26 +167,38 @@ void BinaryMInstruction::output()
     switch (this->op)
     {
     case BinaryMInstruction::ADD:
-        fprintf(yyout, "\tadd ");
+        fprintf(yyout, "\tadd\t");
         break;
     case BinaryMInstruction::SUB:
-        fprintf(yyout, "\tsub ");
+        fprintf(yyout, "\tsub\t");
         break;
     case BinaryMInstruction::MUL:
-        fprintf(yyout, "\tmul ");
+        fprintf(yyout, "\tmul\t");
         break;
     case BinaryMInstruction::DIV:
         // fprintf(yyout, "\tbl\t__aeabi_idiv\n");
-        fprintf(yyout, "\tsdiv ");
+        fprintf(yyout, "\tsdiv\t");
         break;
     // case BinaryMInstruction::MOD:
     //     fprintf(yyout, "\tbl\t__aeabi_idivmod\n");
     //     break;
     case BinaryMInstruction::AND:
-        fprintf(yyout, "\tand ");
+        fprintf(yyout, "\tand\t");
         break;
     case BinaryMInstruction::OR:
-        fprintf(yyout, "\torr ");
+        fprintf(yyout, "\tor\t");
+        break;
+    case BinaryMInstruction::VADD:
+        fprintf(yyout, "\tvadd.f32\t");
+        break;
+    case BinaryMInstruction::VSUB:
+        fprintf(yyout, "\tvsub.f32\t");
+        break;
+    case BinaryMInstruction::VMUL:
+        fprintf(yyout, "\tvmul.f32\t");
+        break;
+    case BinaryMInstruction::VDIV:
+        fprintf(yyout, "\tvdiv.f32\t");
         break;
     default:
         break;
@@ -582,8 +594,8 @@ void MachineFunction::output()
                 fregs.push_back(i);
         } 
     }
-    size_t cnt = 0;
     if(!regs.empty()){
+        size_t cnt = 0;
         fprintf(yyout, "\tpush {");
         for (auto &&i : regs)
         {
@@ -595,12 +607,16 @@ void MachineFunction::output()
         fprintf(yyout, "}\n");
     }
     if(!fregs.empty()){
+        size_t cnt = 0;
+        fprintf(yyout, "\tpush {");
         for (auto &&i : fregs)
         {
-            fprintf(yyout, "\tpush {");
             fprintf(yyout, "s%d", i-16);
-            fprintf(yyout, "}\n");
+            if(cnt != fregs.size() - 1)
+                fprintf(yyout, ", ");
+            cnt++;
         }
+        fprintf(yyout, "}\n");
     }
     if(stack_size!=0){
         if(stack_size > 255) {
