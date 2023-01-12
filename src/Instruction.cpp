@@ -5,6 +5,9 @@
 #include "Type.h"
 extern FILE* yyout;
 
+int cntParam = 0;
+MachineFunction* lastFunc = nullptr;
+
 Instruction::Instruction(unsigned instType, BasicBlock *insert_bb)
 {
     prev = next = this;
@@ -581,14 +584,28 @@ void AllocaInstruction::genMachineCode(AsmBuilder* builder)
     // int offset = cur_func->AllocSpace(4);
     // 分情况，数组需要计算空间的大小
     int offset;
-    // 先与上判断条件：防止错误的类型转换
-    if(!se->isTemporary() && ((IdentifierSymbolEntry*)se)->isArray()){
-        auto i = ((IdentifierSymbolEntry*)se);
-        offset = cur_func->AllocSpace(((SizedType*)i->getArrayType()->getElementType())->getSize() * i->getArrayType()->getCntEleNum() / 4);
+    
+    // if(lastFunc != builder->getFunction()){
+    //     cntParam = 0;
+    //     lastFunc = builder->getFunction();
+    // }
+    // if(cntParam < 4 || !(se->isVariable() && ((IdentifierSymbolEntry*)se)->isParam())){
+    if(!(se->isVariable() && ((IdentifierSymbolEntry*)se)->getParamNumber() > 3)){
+        // 先与上判断条件：防止错误的类型转换
+        if(!se->isTemporary() && ((IdentifierSymbolEntry*)se)->isArray()){
+            auto i = ((IdentifierSymbolEntry*)se);
+            offset = cur_func->AllocSpace(((SizedType*)i->getArrayType()->getElementType())->getSize() * i->getArrayType()->getCntEleNum() / 4);
+        }else{
+            offset = cur_func->AllocSpace(4);
+        }
+        dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry())->setOffset(-offset);
     }else{
-        offset = cur_func->AllocSpace(4);
+        // 参数已经在栈上了，不用再分配空间
+        dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry())->setOffset(8 + 4 * (((IdentifierSymbolEntry*)se)->getParamNumber() - 4));
     }
-    dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry())->setOffset(-offset);
+    // 只有param才能更新cnt
+    // if(se->isVariable() && ((IdentifierSymbolEntry*)se)->isParam())
+    //     cntParam++;
 }
 
 void LoadInstruction::genMachineCode(AsmBuilder* builder)
