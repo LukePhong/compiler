@@ -1,8 +1,9 @@
 #include "MachineCode.h"
 #include "Unit.h"
+#include <vector>
 extern FILE* yyout;
 
-MachineOperand::MachineOperand(int tp, int val)
+MachineOperand::MachineOperand(int tp, int val, bool isFlt, float fVal)
 {
     this->type = tp;
     if(tp == MachineOperand::IMM){
@@ -10,6 +11,9 @@ MachineOperand::MachineOperand(int tp, int val)
     }
     else 
         this->reg_no = val;
+    //支持浮点数
+    this->isFlt = isFlt;
+    if(this->isFlt) this->fval = fVal;
 }
 
 MachineOperand::MachineOperand(std::string label, bool isFuncLabel) : isFuncLabel(isFuncLabel)
@@ -62,7 +66,16 @@ void MachineOperand::PrintReg()
         fprintf(yyout, "pc");
         break;
     default:
-        fprintf(yyout, "r%d", reg_no);
+        if(this->isFlt){
+            if(reg_no <= 47) {
+                fprintf(yyout, "s%d", reg_no-16);
+            }
+            else {
+                fprintf(yyout, "FPSCR");
+            }
+        }else{
+            fprintf(yyout, "r%d", reg_no);
+        }
         break;
     }
 }
@@ -77,7 +90,14 @@ void MachineOperand::output()
     switch (this->type)
     {
     case IMM:
-        fprintf(yyout, "#%d", this->val);
+        if(this->isFlt){
+            uint32_t temp = reinterpret_cast<uint32_t&>(this->fval);
+            fprintf(yyout, "#%u", temp);
+        }
+        else{
+            fprintf(yyout, "#%d", this->val);
+        }
+        
         break;
     case VREG:
         fprintf(yyout, "v%d", this->reg_no);
@@ -100,8 +120,23 @@ void MachineInstruction::PrintCond()
     // TODO
     switch (cond)
     {
+    case EQ:
+        fprintf(yyout, "eq");
+        break;
+    case NE:
+        fprintf(yyout, "ne");
+        break;
     case LT:
         fprintf(yyout, "lt");
+        break;
+    case GT:
+        fprintf(yyout, "gt");
+        break;
+    case LE:
+        fprintf(yyout, "le");
+        break;
+    case GE:
+        fprintf(yyout, "ge");
         break;
     default:
         break;
@@ -132,26 +167,41 @@ void BinaryMInstruction::output()
     switch (this->op)
     {
     case BinaryMInstruction::ADD:
-        fprintf(yyout, "\tadd ");
+        fprintf(yyout, "\tadd\t");
         break;
     case BinaryMInstruction::SUB:
-        fprintf(yyout, "\tsub ");
+        fprintf(yyout, "\tsub\t");
         break;
     case BinaryMInstruction::MUL:
-        fprintf(yyout, "\tmul ");
+        fprintf(yyout, "\tmul\t");
         break;
     case BinaryMInstruction::DIV:
         // fprintf(yyout, "\tbl\t__aeabi_idiv\n");
-        fprintf(yyout, "\tsdiv ");
+        fprintf(yyout, "\tsdiv\t");
         break;
     // case BinaryMInstruction::MOD:
     //     fprintf(yyout, "\tbl\t__aeabi_idivmod\n");
     //     break;
     case BinaryMInstruction::AND:
-        fprintf(yyout, "\tand ");
+        fprintf(yyout, "\tand\t");
         break;
     case BinaryMInstruction::OR:
-        fprintf(yyout, "\torr ");
+        fprintf(yyout, "\tor\t");
+        break;
+    case BinaryMInstruction::VADD:
+        fprintf(yyout, "\tvadd.f32\t");
+        break;
+    case BinaryMInstruction::VSUB:
+        fprintf(yyout, "\tvsub.f32\t");
+        break;
+    case BinaryMInstruction::VMUL:
+        fprintf(yyout, "\tvmul.f32\t");
+        break;
+    case BinaryMInstruction::VDIV:
+        fprintf(yyout, "\tvdiv.f32\t");
+        break;
+    case BinaryMInstruction::LSL:
+        fprintf(yyout, "\tlsl ");
         break;
     default:
         break;
@@ -187,14 +237,33 @@ LoadMInstruction::LoadMInstruction(MachineBlock* p,
 
 void LoadMInstruction::output()
 {
-    fprintf(yyout, "\tldr ");
+    switch (op)
+    {
+    case LoadMInstruction::LDR:
+        fprintf(yyout, "\tldr ");
+        break;
+    case LoadMInstruction::VLDR:
+        fprintf(yyout, "\tvldr.32 ");
+        break;
+    default:
+        break;
+    }
+    
     this->def_list[0]->output();
     fprintf(yyout, ", ");
 
     // Load immediate num, eg: ldr r1, =8
     if(this->use_list[0]->isImm())
     {
-        fprintf(yyout, "=%d\n", this->use_list[0]->getVal());
+        //支持浮点数
+        if(use_list[0]->isFloat())
+        {
+            float fval = this->use_list[0]->getFval();
+            uint32_t temp = reinterpret_cast<uint32_t&>(fval);
+            fprintf(yyout, "=%u\n", temp);
+        }
+        else
+            fprintf(yyout, "=%d\n", this->use_list[0]->getVal());
         return;
     }
 
@@ -236,7 +305,19 @@ StoreMInstruction::StoreMInstruction(MachineBlock* p,
 void StoreMInstruction::output()
 {
     //p1补全str指令的输出和生成
-    fprintf(yyout, "\tstr ");
+    //支持浮点数
+    switch (op)
+    {
+    case StoreMInstruction::STR:
+        fprintf(yyout, "\tstr ");
+        break;
+    case StoreMInstruction::VSTR:
+        fprintf(yyout, "\tvstr.32 ");
+        break;
+    default:
+        break;
+    }
+    
     this->use_list[0]->output();
     fprintf(yyout, ", ");
 
@@ -273,31 +354,25 @@ MovMInstruction::MovMInstruction(MachineBlock* p, int op,
 void MovMInstruction::output() 
 {
     //如何表示cond？
-    switch (cond)
+    switch (op)
     {
-    case EQ:
-        fprintf(yyout, "\tmoveq\t");
+    case MovMInstruction::MOV:
+        fprintf(yyout, "\tmov");
         break;
-    case NE:
-        fprintf(yyout, "\tmovne\t");
+    case MovMInstruction::MOVT:
+        fprintf(yyout, "\tmovt");
         break;
-    case LT:
-        fprintf(yyout, "\tmovlt\t");
+    case MovMInstruction::VMOV:
+        fprintf(yyout, "\tvmov");
         break;
-    case GT:
-        fprintf(yyout, "\tmovgt\t");
-        break;
-    case LE:
-        fprintf(yyout, "\tmovle\t");
-        break;
-    case GE:
-        fprintf(yyout, "\tmovge\t");
+    case MovMInstruction::VMOVF32:
+        fprintf(yyout, "\tvmov.f32");
         break;
     default:
-        fprintf(yyout, "\tmov\t");
         break;
     }
-    // fprintf(yyout, "\tmov ");
+    PrintCond();
+    fprintf(yyout, "\t");
     this->def_list[0]->output();
     fprintf(yyout, ", ");
     this->use_list[0]->output();
@@ -361,11 +436,11 @@ void BranchMInstruction::output()
 
 CmpMInstruction::CmpMInstruction(MachineBlock* p, 
     MachineOperand* src1, MachineOperand* src2, 
-    int cond)
+    int op, int cond)
 {
     // TODO
     this->parent = p;
-    this->type = MachineInstruction::CMP;
+    this->type = op;
     this->use_list.push_back(src1);
     this->use_list.push_back(src2);
     src1->setParent(this);
@@ -378,10 +453,65 @@ void CmpMInstruction::output()
     // TODO
     // Jsut for reg alloca test
     // delete it after test
-    fprintf(yyout, "\tcmp ");
+    switch (type)
+    {
+    case CmpMInstruction::CMP:
+        fprintf(yyout, "\tcmp ");
+        break;
+    case CmpMInstruction::VCMP:
+        fprintf(yyout, "\tvcmp.f32 ");
+        break;
+    default:
+        break;
+    }
     this->use_list[0]->output();
     fprintf(yyout, ", ");
     this->use_list[1]->output();
+    fprintf(yyout, "\n");
+}
+
+VmrsMInstruction::VmrsMInstruction(MachineBlock* p)
+{
+    this->parent = p;
+    this->type = MachineInstruction::VMRS;
+}
+
+void VmrsMInstruction::output()
+{
+    fprintf(yyout, "\tvmrs APSR_nzcv, FPSCR\n");
+}
+
+VcvrMInstruction::VcvrMInstruction(MachineBlock* p, int op,
+                                   MachineOperand* dst,MachineOperand* src,
+                                   int cond)
+{
+    this->parent = p;
+    this->type = MachineInstruction::VCVR;
+    this->op = op;
+    this->cond = cond;
+    this->def_list.push_back(dst);
+    this->use_list.push_back(src);
+    dst->setParent(this);
+    src->setParent(this);
+}
+
+void VcvrMInstruction::output()
+{
+    switch (this->op) {
+        case VcvrMInstruction::F2I:
+            fprintf(yyout, "\tvcvt.s32.f32 ");
+            break;
+        case VcvrMInstruction::I2F:
+            fprintf(yyout, "\tvcvt.f32.s32 ");
+            break;
+        default:
+            break;
+    }
+    PrintCond();
+    fprintf(yyout, " ");
+    this->def_list[0]->output();
+    fprintf(yyout, ", ");
+    this->use_list[0]->output();
     fprintf(yyout, "\n");
 }
 
@@ -464,6 +594,10 @@ void ZextMInstruction::output() {
     fprintf(yyout, "\n");
 }
 
+void BitCastMInstruction::output() {
+
+}
+
 /*============================================================================*/
 MachineFunction::MachineFunction(MachineUnit* p, SymbolEntry* sym_ptr) 
 { 
@@ -512,13 +646,35 @@ void MachineFunction::output()
     *  4. Allocate stack space for local variable */
     fprintf(yyout, "\tpush {fp, lr}\n");
     fprintf(yyout, "\tmov fp, sp\n");
-    size_t cnt = 0;
+    std::vector<int> regs, fregs;
     if(!saved_regs.empty()){
-        fprintf(yyout, "\tpush {");
         for (auto &&i : saved_regs)
         {
+            if(i<16)
+                regs.push_back(i);
+            else
+                fregs.push_back(i);
+        } 
+    }
+    if(!regs.empty()){
+        size_t cnt = 0;
+        fprintf(yyout, "\tpush {");
+        for (auto &&i : regs)
+        {
             fprintf(yyout, "r%d", i);
-            if(cnt != saved_regs.size() - 1)
+            if(cnt != regs.size() - 1)
+                fprintf(yyout, ", ");
+            cnt++;
+        }
+        fprintf(yyout, "}\n");
+    }
+    if(!fregs.empty()){
+        size_t cnt = 0;
+        fprintf(yyout, "\tvpush {");
+        for (auto &&i : fregs)
+        {
+            fprintf(yyout, "s%d", i-16);
+            if(cnt != fregs.size() - 1)
                 fprintf(yyout, ", ");
             cnt++;
         }
@@ -547,11 +703,23 @@ void MachineFunction::output()
             fprintf(yyout, "\tadd sp, sp, #%d\n", stack_size);
         }
     }
+    if(!fregs.empty()){
+        size_t cnt = 0;
+        fprintf(yyout, "\tvpop {");
+        for (auto &&i : fregs)
+        {
+            fprintf(yyout, "s%d", i-16);
+            if(cnt != fregs.size() - 1)
+                fprintf(yyout, ", ");
+            cnt++;
+        }
+        fprintf(yyout, "}\n");
+    }
     //恢复saved registers和fp
     fprintf(yyout, "\tpop {");
     // cnt = 0;
-    if(!saved_regs.empty()){
-        for (auto &&i : saved_regs)
+    if(!regs.empty()){
+        for (auto &&i : regs)
         {
             fprintf(yyout, "r%d", i);
             // if(cnt != saved_regs.size() - 1)
@@ -580,15 +748,20 @@ void MachineUnit::PrintGlobalDecl()
                 fprintf(yyout, "\t.align 4\n");
                 fprintf(yyout,"\t.size %s, 4\n", var->toAsmStr().c_str());
                 fprintf(yyout,"%s:\n", var->toAsmStr().c_str());
-                // TODO: 待将所有的数组元素初始值保存下来后填充
-                // if(((ArrayType*)var->getType())->getElementType()->isInt()) {
-                //     for (auto value: var->arrayValues) {
-                //         fprintf(yyout, "\t.word %d\n", int(value));
-                //     }
-                // }
-                // else {
-                //     ;
-                // }
+                // 待将所有的数组元素初始值保存下来后填充
+                // 这里一定是元数个数不等于零
+                if(((ArrayType*)var->getType())->getElementType()->isInt()) {
+                    if(!var->getArrExpr().empty())
+                        for (auto value: var->getArrExpr()) {
+                            fprintf(yyout, "\t.word %d\n", ((ConstantSymbolEntry*)value->getSymPtr())->getValueInt());
+                        }
+                    else{
+                        fprintf(yyout,"\t.zero %d\n", ((ArrayType*)var->getType())->getCntEleNum() * 4);
+                    }
+                }
+                else {
+                    ;
+                }
             }
         }
         else {
@@ -603,7 +776,9 @@ void MachineUnit::PrintGlobalDecl()
                     if(var->getType()->isInt()) {
                         fprintf(yyout, "\t.word %s\n", var->getGlbValue()->toStr().c_str());
                     } else {
-                        ;
+                        auto value = float((var->getGlbValue())->getValueFloat());
+                        uint32_t temp = reinterpret_cast<uint32_t&>(value);
+                        fprintf(yyout, "\t.word %u\n", temp);
                     }
                 }
             }
@@ -622,6 +797,7 @@ void MachineUnit::output()
     fprintf(yyout, "\t.arch armv8-a\n");
     fprintf(yyout, "\t.fpu vfpv3-d16\n");
     fprintf(yyout, "\t.arch_extension crc\n");
+    //fprintf(yyout, "\t.arm\n");
     PrintGlobalDecl();
     fprintf(yyout, "\t.text\n");
     for(auto iter : func_list)

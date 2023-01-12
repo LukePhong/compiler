@@ -31,13 +31,14 @@ private:
     MachineInstruction* parent;
     int type;
     int val;  // value of immediate number
+    float fval; //value of float immediate number
     int reg_no; // register no
     std::string label; // address label
     bool isFuncLabel;
     bool isFlt = false;  // 判断是否浮点数
 public:
     enum { IMM, VREG, REG, LABEL };
-    MachineOperand(int tp, int val);
+    MachineOperand(int tp, int val, bool isFlt = false, float fVal=0.0);
     MachineOperand(std::string label, bool isFunc = false);
     bool operator == (const MachineOperand&) const;
     bool operator < (const MachineOperand&) const;
@@ -47,6 +48,7 @@ public:
     bool isLabel() { return this->type == LABEL; };
     bool isOverFlowImm() { return this->type == IMM && (val > 255 || val <-255);}
     int getVal() {return this->val; };
+    float getFval() { return this->fval; };
     bool isFloat() { return this->isFlt; }
     int getReg() {return this->reg_no; };
     void setReg(int regno) {this->type = REG; this->reg_no = regno;};
@@ -72,7 +74,7 @@ protected:
     void addUse(MachineOperand* ope) { use_list.push_back(ope); };
     // Print execution code after printing opcode
     void PrintCond();
-    enum instType { BINARY, LOAD, STORE, MOV, BRANCH, CMP, STACK, ZEXT};
+    enum instType { BINARY, LOAD, STORE, MOV, BRANCH, CMP, STACK, ZEXT, BTCAST, VMRS, VCVR};
 public:
     enum condType { EQ, NE, LT, LE , GT, GE, NONE };
     virtual void output() = 0;
@@ -86,7 +88,7 @@ public:
 class BinaryMInstruction : public MachineInstruction
 {
 public:
-    enum opType { ADD, SUB, MUL, DIV, MOD, AND, OR };
+    enum opType { ADD, SUB, MUL, DIV, MOD, AND, OR, VADD, VSUB, VMUL, VDIV, LSL};
     BinaryMInstruction(MachineBlock* p, int op, 
                     MachineOperand* dst, MachineOperand* src1, MachineOperand* src2, 
                     int cond = MachineInstruction::NONE);
@@ -117,7 +119,7 @@ public:
 class MovMInstruction : public MachineInstruction
 {
 public:
-    enum opType { MOV, MVN };
+    enum opType { MOV, MVN, MOVT, VMOV, VMOVF32 };
     MovMInstruction(MachineBlock* p, int op, 
                 MachineOperand* dst, MachineOperand* src,
                 int cond = MachineInstruction::NONE);
@@ -137,10 +139,27 @@ public:
 class CmpMInstruction : public MachineInstruction
 {
 public:
-    enum opType { CMP };
+    enum opType { CMP, VCMP };
     CmpMInstruction(MachineBlock* p, 
                 MachineOperand* src1, MachineOperand* src2, 
-                int cond = MachineInstruction::NONE);
+                int op = CMP, int cond = MachineInstruction::NONE);
+    void output();
+};
+
+class VmrsMInstruction : public MachineInstruction
+{
+public:
+    VmrsMInstruction(MachineBlock* p);
+    void output();
+};
+
+class VcvrMInstruction : public MachineInstruction
+{
+public:
+    enum opType {I2F , F2I};
+    VcvrMInstruction(MachineBlock* p, int op,
+                     MachineOperand* dst, MachineOperand* src,
+                     int cond = MachineInstruction::NONE);
     void output();
 };
 
@@ -160,6 +179,15 @@ public:
     ZextMInstruction(MachineBlock* p,
                 MachineOperand* dst, MachineOperand* src,
                 int cond = MachineInstruction::NONE);
+    void output();
+};
+
+class BitCastMInstruction : public ZextMInstruction
+{
+public:
+    BitCastMInstruction(MachineBlock* p,
+                MachineOperand* dst, MachineOperand* src,
+                int cond = MachineInstruction::NONE) : ZextMInstruction(p, dst, src, cond) { type = MachineInstruction::BTCAST; };
     void output();
 };
 

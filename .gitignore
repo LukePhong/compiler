@@ -2,3 +2,7 @@ test
 build
 *.s
 *.ll
+*.res
+*.log
+*.bin
+*.s

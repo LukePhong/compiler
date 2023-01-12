@@ -27,7 +27,7 @@ public:
     virtual void output() const = 0;
     MachineOperand* genMachineOperand(Operand*);
     MachineOperand* genMachineReg(int reg);
-    MachineOperand* genMachineVReg();
+    MachineOperand* genMachineVReg(bool isFlt = false);
     MachineOperand* genMachineImm(int val);
     MachineOperand* genMachineLabel(int block_no);
     virtual void genMachineCode(AsmBuilder*) = 0;
@@ -74,12 +74,13 @@ public:
 class GetElementPtrInstruction : public LoadInstruction
 {
 public:
-    GetElementPtrInstruction(Operand *dst, Operand *src_addr, Operand * dim, BasicBlock *insert_bb = nullptr);
+    GetElementPtrInstruction(Operand *dst, Operand *src_addr, Operand * dim, /*bool isParam = false,*/ BasicBlock *insert_bb = nullptr, IdentifierSymbolEntry* ident = nullptr);
     void output() const;
+    void genMachineCode(AsmBuilder*);
 private:
-    // IdentifierSymbolEntry* arrDef;
-    // std::vector<ExprNode*>& dimList;
     Operand * dim;
+    // bool isParam = false;
+    IdentifierSymbolEntry* arr;
 };
 
 class StoreInstruction : public Instruction
@@ -98,7 +99,7 @@ public:
     ~BinaryInstruction();
     void output() const;
     void genMachineCode(AsmBuilder*);
-    enum {SUB, ADD, MUL, DIV, MOD, AND, OR};
+    enum {SUB, ADD, MUL, DIV, MOD, AND, OR, LSL};
 };
 
 class CmpInstruction : public Instruction
@@ -185,6 +186,7 @@ public:
     enum {I2F, F2I};
 };
 
+// 强制类型转换
 class BitCastInstruction : public ZextInstruction
 {
 public:
