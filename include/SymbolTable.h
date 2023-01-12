@@ -162,7 +162,7 @@ public:
     void setNameOfFunc(std::string s) { nameOfFunc = s; }
     void setAsmName(std::string s) { asmName = s; }
     bool isArray() { return isArrayIdent; }
-    bool setArray() { isArrayIdent = true; }
+    void setArray() { isArrayIdent = true; }
     void setArrayType( ArrayType* t) { arrType = t; }
     ArrayType* getArrayType() { return arrType; }
 };

@@ -530,16 +530,19 @@ MachineOperand* Instruction::genMachineOperand(Operand* ope)
             mope = new MachineOperand(MachineOperand::IMM, dynamic_cast<ConstantSymbolEntry*>(se)->getValueInt());
         else
             mope = new MachineOperand(MachineOperand::IMM, dynamic_cast<ConstantSymbolEntry*>(se)->getValueFloat());
-    }else if(se->isTemporary())
+    }else if(se->isTemporary() && !se->getType()->isPtrType())
         mope = new MachineOperand(MachineOperand::VREG, dynamic_cast<TemporarySymbolEntry*>(se)->getLabel());
-    else if(se->isVariable() || (se->isConstant() && !se->getType()->isNumber()))
+    else if(se->isVariable() 
+            || (se->isConstant() && !se->getType()->isNumber())
+            || (se->isTemporary() && se->getType()->isPtrType()))
     {
         auto id_se = dynamic_cast<IdentifierSymbolEntry*>(se);
-        if(id_se->isGlobal())//||id_se->getType()->isPtrType())    // ||后面的部分是为了数组
-            mope = new MachineOperand(id_se->toAsmStr().c_str());
+        // 如果是Temporary进来可能没有id_se
+        if((id_se != nullptr && id_se->isGlobal()) || (se->getType()->isPtrType() && ((PointerType*)se->getType())->isGlobal()))    // ||后面的部分是为了数组 应改为isArray&&isAllDefined
+            mope = new MachineOperand(id_se->toAsmStr().c_str());   // "addr_"是输出时补上的
         else{
-            // exit(0);
             // assert(0);
+            // 生成数组首地址在栈中的偏移量
             mope = new MachineOperand(MachineOperand::IMM, ((TemporarySymbolEntry*)se)->getOffset());
         }
     }
@@ -927,6 +930,7 @@ void FunctionCallInstuction::genMachineCode(AsmBuilder* builder){
     for(unsigned int i = operands.size() - 1; i > 0; i--){
         //如果类型是数组，需要考虑局部数组指针的情况
         // if(operands[i]->getEntry()->getType()->isArrayType()){
+        // 这里应该改为使用symbol entry里面的isArray
         if(operands[i]->getEntry()->getType()->isPtrType()){
             //需要保证不是值而是数组指针
             // bool isPointer = false;
@@ -941,23 +945,27 @@ void FunctionCallInstuction::genMachineCode(AsmBuilder* builder){
             //     ;
             // }
             //必须保证是局部数组，而且不是传进来的参数
-            //必须确定这个数组在当前函数的调用栈中能够找到
-            if(1/*is local*/){
+            //必须确定这个数组在当前函数的调用栈中能够找到，因为这里拿到的是偏移地址
+            //此处如何区分局部和全局区?
+            // if(1/*is local*/){
                 auto dst_addr = genMachineVReg();
                 auto fp = genMachineReg(11);
-                // auto offset = genMachineOperand(operands[i]);
-                // if(offset->isImm()) {
+                auto offset = genMachineOperand(operands[i]);
+                if(offset->isImm()) {
                     // auto val = ((ConstantSymbolEntry*)(operands[i]->getEntry()))->isInt() ? ((ConstantSymbolEntry*)(operands[i]->getEntry()))->getValueInt() : ((ConstantSymbolEntry*)(operands[i]->getEntry()))->getValueFloat();
-                    auto val = ((TemporarySymbolEntry*)operands[i]->getEntry())->getOffset();
-                    auto offset = new MachineOperand(MachineOperand::IMM, val);
+                    // auto val = ((TemporarySymbolEntry*)operands[i]->getEntry())->getOffset();
+                    auto val = offset->getVal();
+                    // auto offset = new MachineOperand(MachineOperand::IMM, val);
                     if(val > 255 || val < -255) {
                         auto internal_reg = genMachineVReg();
                         cur_inst = new LoadMInstruction(cur_block, internal_reg, offset);
                         cur_block->InsertInst(cur_inst);
                         offset = new MachineOperand(*internal_reg);
                     }
-                // }
-                cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD, dst_addr, fp, offset);
+                    cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD, dst_addr, fp, offset);
+                }else{
+                    cur_inst = new LoadMInstruction(cur_block, dst_addr, offset);
+                }
                 cur_block->InsertInst(cur_inst);
 
                 //左起前4个参数通过r0-r3传递
@@ -973,23 +981,23 @@ void FunctionCallInstuction::genMachineCode(AsmBuilder* builder){
                     cur_block->InsertInst(cur_inst);
                     saved_reg_cnt++;
                 }
-            }
-            else{
-                //左起前4个参数通过r0-r3传递
-                if(i<=4){
-                    auto dst = new MachineOperand(MachineOperand::REG, i-1);//r0-r3
-                    cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, genMachineOperand(operands[i]));
-                    cur_block->InsertInst(cur_inst);
-                }
-                else{
-                    // additional_args.push_back(genMachineOperand(operands[i]));
-                    additional_args.clear();
-                    additional_args.push_back(genMachineOperand(operands[i]));
-                    cur_inst = new StackMInstruction(cur_block, StackMInstruction::PUSH, additional_args);
-                    cur_block->InsertInst(cur_inst);
-                    saved_reg_cnt++;
-                }
-            }
+            // }
+            // else{
+            //     //左起前4个参数通过r0-r3传递
+            //     if(i<=4){
+            //         auto dst = new MachineOperand(MachineOperand::REG, i-1);//r0-r3
+            //         cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, genMachineOperand(operands[i]));
+            //         cur_block->InsertInst(cur_inst);
+            //     }
+            //     else{
+            //         // additional_args.push_back(genMachineOperand(operands[i]));
+            //         additional_args.clear();
+            //         additional_args.push_back(genMachineOperand(operands[i]));
+            //         cur_inst = new StackMInstruction(cur_block, StackMInstruction::PUSH, additional_args);
+            //         cur_block->InsertInst(cur_inst);
+            //         saved_reg_cnt++;
+            //     }
+            // }
         }
         else{
             //左起前4个参数通过r0-r3传递
@@ -1060,7 +1068,11 @@ void BitCastInstruction::genMachineCode(AsmBuilder* builder){
     MachineBlock* cur_block = builder->getBlock();
     MachineInstruction* cur_inst = nullptr;
     //p5汇编数组寻址-起始地址
-    ((TemporarySymbolEntry*)operands[0]->getEntry())->setOffset(((TemporarySymbolEntry*)operands[1]->getEntry())->getOffset());
+    if(operands[1]->getEntry()->isVariable())
+        operands[0]->setEntry(operands[1]->getEntry());
+    else
+        ((TemporarySymbolEntry*)operands[0]->getEntry())->setOffset(((TemporarySymbolEntry*)operands[1]->getEntry())->getOffset());
+
     MachineOperand* dst = genMachineOperand(operands[0]);
     MachineOperand* src = genMachineOperand(operands[1]);
     cur_inst = new BitCastMInstruction(cur_block, dst, src);

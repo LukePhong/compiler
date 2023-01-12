@@ -927,13 +927,15 @@ void ArrayDef::genCode() {
             if(flag.arrayIdStk.top()->isLocal())
                 builder->getUnit()->getGlbIds().push_back(flag.arrayIdStk.top());
             // 拷贝到栈区中
+            // 在genMachineOperand的时候无法区分的根本原因在于，Pointer其实有两种，一种是指向栈上空间的，一种是指全局区的
             auto tmpEntryStk = new TemporarySymbolEntry(new PointerType(TypeSystem::shortIntType), SymbolTable::getLabel());
             auto opStk = new Operand(tmpEntryStk);
-            new BitCastInstruction(opStk, flag.arrayIdStk.top()->getAddr(), bb);
+            new BitCastInstruction(opStk, flag.arrayIdStk.top()->getAddr(), bb);    // src的类型是array
             auto tmpEntryGlb = new TemporarySymbolEntry(new PointerType(TypeSystem::shortIntType), SymbolTable::getLabel());
             auto opGlb = new Operand(tmpEntryGlb);
+            // ((PointerType*)flag.arrayIdStk.top()->getType())->setGlobal();  // 可能导致崩溃
             auto name = new IdentifierSymbolEntry(*flag.arrayIdStk.top());
-            name->setType(new PointerType(name->getType()));
+            name->setType(new PointerType(name->getType(), true));    // src的类型是pointer
             auto opName = new Operand(name);
             new BitCastInstruction(opGlb, opName, bb);
             //调用memcpy函数
