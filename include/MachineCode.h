@@ -74,7 +74,7 @@ protected:
     void addUse(MachineOperand* ope) { use_list.push_back(ope); };
     // Print execution code after printing opcode
     void PrintCond();
-    enum instType { BINARY, LOAD, STORE, MOV, BRANCH, CMP, STACK, ZEXT, VMRS};
+    enum instType { BINARY, LOAD, STORE, MOV, BRANCH, CMP, STACK, ZEXT, VMRS, VCVR};
 public:
     enum condType { EQ, NE, LT, LE , GT, GE, NONE };
     virtual void output() = 0;
@@ -150,6 +150,16 @@ class VmrsMInstruction : public MachineInstruction
 {
 public:
     VmrsMInstruction(MachineBlock* p);
+    void output();
+};
+
+class VcvrMInstruction : public MachineInstruction
+{
+public:
+    enum opType {I2F , F2I};
+    VcvrMInstruction(MachineBlock* p, int op,
+                     MachineOperand* dst, MachineOperand* src,
+                     int cond = MachineInstruction::NONE);
     void output();
 };
 
