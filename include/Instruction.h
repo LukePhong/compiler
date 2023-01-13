@@ -34,6 +34,11 @@ public:
     std::vector<Operand*>& getOperands() { return operands; }
     // 这是在后期优化时用于分析的，返回一个需要的类型，欢迎重载
     Type* getType() { return nullptr; }
+    // 我们把这条指令从基本块里删除
+    void removeCurrInst();
+    // 这就意味着必须每一条指令的op必须全部来自operands
+    // 替换operands中的指针并重新设置use关系
+    bool changeOperand(Operand* op, Operand* old);
 protected:
     unsigned instType;
     unsigned opcode;
@@ -60,7 +65,7 @@ public:
     ~AllocaInstruction();
     void output() const;
     void genMachineCode(AsmBuilder*);
-    Type* getType() { return operands[0]->getType(); }
+    Type* getType() { return se->getType(); }   // 我们不返回指针类型
 private:
     SymbolEntry *se;
 };
@@ -73,6 +78,8 @@ public:
     void output() const;
     void genMachineCode(AsmBuilder*);
     Type* getType() { return operands[0]->getType(); }
+    // 所有用到了我的dst的地方，你们use这个op吧
+    void replaceAllUsesWith(Operand* op);
 };
 
 class GetElementPtrInstruction : public LoadInstruction
@@ -81,8 +88,9 @@ public:
     GetElementPtrInstruction(Operand *dst, Operand *src_addr, Operand * dim, /*bool isParam = false,*/ BasicBlock *insert_bb = nullptr, IdentifierSymbolEntry* ident = nullptr);
     void output() const;
     void genMachineCode(AsmBuilder*);
+    bool isZeroDim();
 private:
-    Operand * dim;
+    // Operand * dim;
     // bool isParam = false;
     IdentifierSymbolEntry* arr;
 };
@@ -95,6 +103,7 @@ public:
     void output() const;
     void genMachineCode(AsmBuilder*);
     Type* getType() { return operands[1]->getType(); }
+    bool isStoringGlobalVal() { return operands[1]->getEntry()->isVariable() && ((IdentifierSymbolEntry*)operands[1]->getEntry())->isGlobal(); }
 };
 
 class BinaryInstruction : public Instruction

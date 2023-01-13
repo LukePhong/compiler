@@ -7,6 +7,7 @@
 #include "SymbolTable.h"
 #include "MachineCode.h"
 #include "LinearScan.h"
+#include "Mem2Reg.h"
 using namespace std;
 
 Ast ast;
@@ -174,6 +175,11 @@ int main(int argc, char *argv[])
         ast.output();
     ast.typeCheck();
     ast.genCode(&unit);
+    // 务必注意！mem2reg优化的是IR
+    if(use_opti){
+        Mem2Reg m2r(&unit);
+        m2r.buildSSA();
+    }
     if(dump_ir)
         unit.output();
     mUnit.setUnit(&unit);

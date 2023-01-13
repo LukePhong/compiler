@@ -119,3 +119,13 @@ BasicBlock::~BasicBlock()
         bb->removePred(this);
     parent->remove(this);
 }
+
+bool BasicBlock::isInstAfterInst(Instruction* a, Instruction* b){
+    Instruction* curr = b;
+    while(curr != this->end()){
+        if(curr == a)
+            return true;
+        curr = curr->getNext();
+    }
+    return false;
+}

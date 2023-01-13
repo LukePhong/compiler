@@ -11,6 +11,6 @@ DomTreeGen::~DomTreeGen()
 {
 }
 
-void DomTreeGen::pass(MachineFunction *func)
+void DomTreeGen::pass(Function *func)
 {
 }

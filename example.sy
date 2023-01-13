@@ -1,5 +1,5 @@
 int V[200][200]={};
-int KnapSack(int n, int w[], int v[], int x[], int C)
+/*int KnapSack(int n, int w[], int v[], int x[], int C)
 {
     int i, j;
     i=1;
@@ -46,7 +46,7 @@ int KnapSack(int n, int w[], int v[], int x[], int C)
         i=i-1;
 	}
     return V[n][C];
-}
+}*/
 
 int main()
 {
@@ -56,7 +56,8 @@ int main()
     int x[6];
     int n = 5;
     int C=10;
-    s = KnapSack(n, w, v, x, C);
+    //s = KnapSack(n, w, v, x, C);
+    s = 1;
     putint(s);
     return 0;
 

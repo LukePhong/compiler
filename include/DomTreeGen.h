@@ -1,8 +1,5 @@
 
-class MachineFunction;
-class MachineUnit;
-class MachineOperand;
-class MachineBlock;
+class Function;
 
 class DomTreeGen
 {
@@ -13,7 +10,7 @@ public:
     ~DomTreeGen();
 
 public:
-    void pass(MachineFunction *func);
+    void pass(Function *func);
 };
 
 

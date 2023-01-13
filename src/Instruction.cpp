@@ -55,6 +55,21 @@ Instruction *Instruction::getPrev()
     return prev;
 }
 
+bool Instruction::changeOperand(Operand* op, Operand* old){
+    bool ans = false;
+    op->addUse(this);
+    for (size_t i = 0; i < operands.size(); i++)
+    {
+        if(operands[i] == old){
+            operands[i] = op;
+            ans = true;
+        }
+    }
+    return ans;
+}
+
+void Instruction::removeCurrInst() { if(parent) parent->remove(this); }
+
 BinaryInstruction::BinaryInstruction(unsigned opcode, Operand *dst, Operand *src1, Operand *src2, BasicBlock *insert_bb) : Instruction(BINARY, insert_bb)
 {
     this->opcode = opcode;
@@ -354,11 +369,20 @@ void LoadInstruction::output() const
     fprintf(yyout, "  %s = load %s, %s %s, align 4\n", dst.c_str(), dst_type.c_str(), src_type.c_str(), src.c_str());
 }
 
+void LoadInstruction::replaceAllUsesWith(Operand* op){
+    auto dst = operands[0];
+    for (std::vector<Instruction *>::iterator i = dst->use_begin(); i != dst->use_end(); i++){
+        // assert((*i)->changeOperand(op, dst));
+        (*i)->changeOperand(op, dst);
+    }
+}
+
 //q13添加数组IR支持
 GetElementPtrInstruction::GetElementPtrInstruction(Operand *dst, Operand *src_addr, Operand * dim, BasicBlock *insert_bb, IdentifierSymbolEntry* ident) 
-    : LoadInstruction(dst, src_addr, insert_bb), dim(dim), arr(ident)
+    : LoadInstruction(dst, src_addr, insert_bb),/* dim(dim),*/ arr(ident)
 {
     dim->addUse(this);
+    operands.push_back(dim);
 }
 
 void GetElementPtrInstruction::output() const
@@ -369,6 +393,7 @@ void GetElementPtrInstruction::output() const
     std::string dst_type;
     dst_type = operands[0]->getType()->toStr();
     src_type = operands[1]->getType()->toStr();
+    auto dim = operands[2];
     //%7 = getelementptr inbounds [1 x i32], [1 x i32]* @aaa, i64 0, i64 0, align 4
     fprintf(yyout, "  %s = getelementptr inbounds ", dst.c_str());
     // if(dim->getEntry()->isConstant())
@@ -377,6 +402,15 @@ void GetElementPtrInstruction::output() const
     else
         fprintf(yyout, "%s, %s %s, ", src_type.substr(0, src_type.length() - 1).c_str(), src_type.c_str(), src.c_str());
     fprintf(yyout, "%s %s\n", dim->getType()->toStr().c_str(), dim->toStr().c_str());
+}
+
+bool GetElementPtrInstruction::isZeroDim(){
+    auto dim = operands[2];
+    if(!dim->getEntry()->isConstant())
+        return false;
+    if(((ConstantSymbolEntry*)dim->getEntry())->getValueInt() != 0)
+        return false;
+    return true;
 }
 
 StoreInstruction::StoreInstruction(Operand *dst_addr, Operand *src, BasicBlock *insert_bb) : Instruction(STORE, insert_bb)
@@ -1359,6 +1393,7 @@ void GetElementPtrInstruction::genMachineCode(AsmBuilder* builder){
     MachineBlock* cur_block = builder->getBlock();
     MachineInstruction* cur_inst = nullptr;
 
+    auto dim = operands[2];
     auto ptrType = (PointerType*)operands[0]->getType();
     bool isLastLevel = ((PointerType*)operands[0]->getType())->getValueType()->isNumber();
     auto num = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());

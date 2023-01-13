@@ -11,9 +11,10 @@
             "program": "${workspaceFolder}/build/compiler", // 调试的程序位置，是你实际makefile生成的程序
             "args": [
                 "-o",
-                "example.s",
-                "-S",
+                "example.ll",
+                "-i",
                 "example.sy",
+                "-O2"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}", // 当前项目的路径，即用vscode打开文件夹时的位置，需要注意。

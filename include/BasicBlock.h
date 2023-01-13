@@ -46,6 +46,7 @@ public:
     int getNumOfPred() const { return pred.size(); };
     int getNumOfSucc() const { return succ.size(); };
     void genMachineCode(AsmBuilder*);
+    bool isInstAfterInst(Instruction* a, Instruction* b);
 };
 
 #endif
