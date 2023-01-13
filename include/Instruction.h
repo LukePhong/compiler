@@ -32,6 +32,8 @@ public:
     MachineOperand* genMachineLabel(int block_no);
     virtual void genMachineCode(AsmBuilder*) = 0;
     std::vector<Operand*>& getOperands() { return operands; }
+    // 这是在后期优化时用于分析的，返回一个需要的类型，欢迎重载
+    Type* getType() { return nullptr; }
 protected:
     unsigned instType;
     unsigned opcode;
@@ -58,6 +60,7 @@ public:
     ~AllocaInstruction();
     void output() const;
     void genMachineCode(AsmBuilder*);
+    Type* getType() { return operands[0]->getType(); }
 private:
     SymbolEntry *se;
 };
@@ -69,6 +72,7 @@ public:
     ~LoadInstruction();
     void output() const;
     void genMachineCode(AsmBuilder*);
+    Type* getType() { return operands[0]->getType(); }
 };
 
 class GetElementPtrInstruction : public LoadInstruction
@@ -90,6 +94,7 @@ public:
     ~StoreInstruction();
     void output() const;
     void genMachineCode(AsmBuilder*);
+    Type* getType() { return operands[1]->getType(); }
 };
 
 class BinaryInstruction : public Instruction
