@@ -57,6 +57,7 @@
         "ctime": "cpp",
         "iomanip": "cpp",
         "ios": "cpp",
-        "xlocale": "cpp"
+        "xlocale": "cpp",
+        "xstring": "cpp"
     }
 }
