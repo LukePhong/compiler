@@ -634,10 +634,10 @@ void MachineBlock::output()
 
 void MachineFunction::output()
 {
-    const char *func_name = this->sym_ptr->toStr().c_str() + 1;
-    fprintf(yyout, "\t.global %s\n", func_name);
-    fprintf(yyout, "\t.type %s , %%function\n", func_name);
-    fprintf(yyout, "%s:\n", func_name);
+    // const char *func_name = this->sym_ptr->toStr().c_str() + 1;
+    fprintf(yyout, "\t.global %s\n", this->sym_ptr->toStr().c_str() + 1);
+    fprintf(yyout, "\t.type %s , %%function\n", this->sym_ptr->toStr().c_str() + 1);
+    fprintf(yyout, "%s:\n", this->sym_ptr->toStr().c_str() + 1);
     // TODO
     /* Hint:
     *  1. Save fp
@@ -695,7 +695,7 @@ void MachineFunction::output()
     for(auto iter : block_list)
         iter->output();
 
-    fprintf(yyout, ".L%s_END:\n", func_name);
+    fprintf(yyout, ".L%s_END:\n", this->sym_ptr->toStr().c_str() + 1);
     
     if(!fregs.empty()){
         size_t cnt = 0;
