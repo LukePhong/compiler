@@ -645,7 +645,7 @@ void MachineFunction::output()
     *  3. Save callee saved register
     *  4. Allocate stack space for local variable */
     fprintf(yyout, "\tpush {fp, lr}\n");
-    
+    fprintf(yyout, "\tmov fp, sp\n");
     std::vector<int> regs, fregs;
     if(!saved_regs.empty()){
         for (auto &&i : saved_regs)
@@ -680,7 +680,7 @@ void MachineFunction::output()
         }
         fprintf(yyout, "}\n");
     }
-    fprintf(yyout, "\tmov fp, sp\n");
+    
     if(stack_size!=0){
         if(stack_size > 255) {
             fprintf(yyout, "\tldr r4,=%d\n", stack_size);
