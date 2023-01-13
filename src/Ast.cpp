@@ -793,6 +793,8 @@ void FuncCall::genCode() {
     //q2补全代码生成调用链
     auto paramTypes = ((FunctionType*)(funcDef->getType()))->getParamsType();
     int cnt = 0;
+    bool tempflag = flag.isOuterCond;
+    flag.isOuterCond = false;
     for (auto &&i : arg)
     {
         i->genCode();
@@ -802,6 +804,7 @@ void FuncCall::genCode() {
         params.push_back(dst);
         cnt++;
     }
+    flag.isOuterCond = tempflag;
     //q5FunctionCall的代码生成
     new FunctionCallInstuction(dst, params, funcDef, bb);
     
