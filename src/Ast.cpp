@@ -308,7 +308,7 @@ void FunctionDef::genCode()
             if(j->isRet()){
                 shouldErase = true;
                 //返回常量的特殊情况
-                if(!voidAddRet && j->getOperands()[0]->getSymbolEntry()->isConstant()){
+                if(!this->voidAddRet && j->getOperands()[0]->getSymbolEntry()->isConstant()){
                     // new StoreInstruction(retAddr, j->getOperands()[0], i);
                     isConstVec.push_back(j->getOperands()[0]);
                 }else{
@@ -496,7 +496,7 @@ void Constant::genCode()
     // we don't need to generate code.
     BasicBlock *bb = builder->getInsertBB();
     Function *func = bb->getParent();
-    // 不是最外层的ID是不能调用的，因为比如a==5是不行的
+    // 不是最外层的const是不能调用的
     if(flag.isUnderCond && flag.isOuterCond){
         BasicBlock *falseBlock;
         falseBlock = new BasicBlock(func);
@@ -793,6 +793,8 @@ void FuncCall::genCode() {
     //q2补全代码生成调用链
     auto paramTypes = ((FunctionType*)(funcDef->getType()))->getParamsType();
     int cnt = 0;
+    bool tempflag = flag.isOuterCond;
+    flag.isOuterCond = false;
     for (auto &&i : arg)
     {
         i->genCode();
@@ -802,6 +804,7 @@ void FuncCall::genCode() {
         params.push_back(dst);
         cnt++;
     }
+    flag.isOuterCond = tempflag;
     //q5FunctionCall的代码生成
     new FunctionCallInstuction(dst, params, funcDef, bb);
     
