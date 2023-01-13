@@ -646,6 +646,15 @@ void MachineFunction::output()
     *  4. Allocate stack space for local variable */
     fprintf(yyout, "\tpush {fp, lr}\n");
     fprintf(yyout, "\tmov fp, sp\n");
+    if(stack_size!=0){
+        if(stack_size > 255) {
+            fprintf(yyout, "\tldr r4,=%d\n", stack_size);
+            fprintf(yyout, "\tsub sp, sp, r4\n");
+        }
+        else {
+            fprintf(yyout, "\tsub sp, sp, #%d\n", stack_size);
+        }
+    }
     std::vector<int> regs, fregs;
     if(!saved_regs.empty()){
         for (auto &&i : saved_regs)
@@ -681,29 +690,13 @@ void MachineFunction::output()
         fprintf(yyout, "}\n");
     }
     
-    if(stack_size!=0){
-        if(stack_size > 255) {
-            fprintf(yyout, "\tldr r4,=%d\n", stack_size);
-            fprintf(yyout, "\tsub sp, sp, r4\n");
-        }
-        else {
-            fprintf(yyout, "\tsub sp, sp, #%d\n", stack_size);
-        }
-    }
+    
     // Traverse all the block in block_list to print assembly code.
     for(auto iter : block_list)
         iter->output();
 
     fprintf(yyout, ".L%s_END:\n", func_name);
-    if(stack_size!=0){
-        if(stack_size > 255) {
-            fprintf(yyout, "\tldr r4,=%d\n", stack_size);
-            fprintf(yyout, "\tadd sp, sp, r4\n");
-        }
-        else {
-            fprintf(yyout, "\tadd sp, sp, #%d\n", stack_size);
-        }
-    }
+    
     if(!fregs.empty()){
         size_t cnt = 0;
         fprintf(yyout, "\tvpop {");
@@ -717,18 +710,29 @@ void MachineFunction::output()
         fprintf(yyout, "}\n");
     }
     //恢复saved registers和fp
-    fprintf(yyout, "\tpop {");
     // cnt = 0;
     if(!regs.empty()){
+         size_t cnt = 0;
+        fprintf(yyout, "\tpop {");
         for (auto &&i : regs)
         {
             fprintf(yyout, "r%d", i);
-            // if(cnt != saved_regs.size() - 1)
+            if(cnt != regs.size() - 1)
                 fprintf(yyout, ", ");
-            // cnt++;
+            cnt++;
+        }
+        fprintf(yyout, "}\n");
+    }
+    if(stack_size!=0){
+        if(stack_size > 255) {
+            fprintf(yyout, "\tldr r4,=%d\n", stack_size);
+            fprintf(yyout, "\tadd sp, sp, r4\n");
+        }
+        else {
+            fprintf(yyout, "\tadd sp, sp, #%d\n", stack_size);
         }
     }
-    fprintf(yyout, "fp, lr}\n");
+    fprintf(yyout, "\tpop {fp, lr}\n");
     // 3. Generate bx instruction
     fprintf(yyout, "\tbx lr\n\n");
 }
