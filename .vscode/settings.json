@@ -1,5 +1,7 @@
 {
     "files.associations": {
+        "*.l2c_pref": "cpp",
+        "*.llc_repl": "cpp",
         "*.inc": "cpp",
         "array": "cpp",
         "atomic": "cpp",
@@ -53,6 +55,8 @@
         "typeinfo": "cpp",
         "*.def": "cpp",
         "ctime": "cpp",
-        "iomanip": "cpp"
+        "iomanip": "cpp",
+        "ios": "cpp",
+        "xlocale": "cpp"
     }
 }

@@ -276,6 +276,11 @@ void FunctionDef::genCode()
         params->genCode();
     }
     stmt->genCode();
+    //加入的ret void
+    if(this->voidAddRet!=nullptr)
+    {
+        this->voidAddRet->genCode();
+    }
     //q4为function加入exit块
     // 为返回地址分配储存空间，不应该在return处，因为应该一个函数只执行一遍
     if(retAddr){
@@ -303,7 +308,7 @@ void FunctionDef::genCode()
             if(j->isRet()){
                 shouldErase = true;
                 //返回常量的特殊情况
-                if(j->getOperands()[0]->getSymbolEntry()->isConstant()){
+                if(!voidAddRet && j->getOperands()[0]->getSymbolEntry()->isConstant()){
                     // new StoreInstruction(retAddr, j->getOperands()[0], i);
                     isConstVec.push_back(j->getOperands()[0]);
                 }else{
@@ -489,6 +494,17 @@ void BinaryExpr::genCode()
 void Constant::genCode()
 {
     // we don't need to generate code.
+    BasicBlock *bb = builder->getInsertBB();
+    Function *func = bb->getParent();
+    // 不是最外层的ID是不能调用的，因为比如a==5是不行的
+    if(flag.isUnderCond && flag.isOuterCond){
+        BasicBlock *falseBlock;
+        falseBlock = new BasicBlock(func);
+        auto ret = typeConvention(TypeSystem::boolType, dst, bb);
+        true_list.push_back(new CondBrInstruction(nullptr, falseBlock, ret, bb));
+        // without it break for the same reason but found at toBB_f->addPred(i);
+        false_list.push_back(new UncondBrInstruction(nullptr, falseBlock)); // when && break at a CondBrInstruction miss false_branch found at output and none of block end with CondBrInstruction
+    }
 }
 
 void Id::genCode()
@@ -1219,6 +1235,11 @@ void FunctionDef::typeCheck()
         }
         flag.haveReturn = false;
     }
+    //若返回void类型但没有写return语句，需要加上（否则false_block为空导致错误
+    if(!flag.haveReturn && flag.shouldReturn->isVoid())
+    {
+        this->voidAddRet = new ReturnStmt(nullptr);
+    }
     flag.isInFunc = false;
 }
 
@@ -1797,6 +1818,10 @@ void FunctionDef::output(int level)
         params->output(level + 4);
     }
     stmt->output(level + 4);
+    if(voidAddRet!=nullptr)
+    {
+        voidAddRet->output(level + 4);
+    }
 }
 //q10添加参数列表
 void FuncParam::addNext(StmtNode* next)
