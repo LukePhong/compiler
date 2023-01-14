@@ -212,6 +212,7 @@ public:
 class PhiInstruction : public Instruction
 {
 public:
+    PhiInstruction(BasicBlock *insert_bb = nullptr) : Instruction(PHI, insert_bb) {};
     PhiInstruction(Operand *dst, std::vector<Operand *> srcVec, std::vector<BasicBlock *> blkVec, BasicBlock *insert_bb = nullptr);
     ~PhiInstruction();
     void output() const;

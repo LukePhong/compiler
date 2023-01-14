@@ -576,19 +576,23 @@ PhiInstruction::~PhiInstruction()
 
 void PhiInstruction::output() const
 {
-    std::string dst = operands[0]->toStr();
-    std::string dst_type;
-    dst_type = operands[0]->getType()->toStr();
-    fprintf(yyout, "  %s = phi %s", dst.c_str(), dst_type.c_str());
-    int cnt = 0;
-    for (auto &&i : blkVec)
-    {
-        cnt++;
-        fprintf(yyout, "[ %s, %B%d]", operands[cnt]->toStr().c_str(), i->getNo());
-        if(cnt < blkVec.size())
-            fprintf(yyout, ",");
+    if(0){
+        std::string dst = operands[0]->toStr();
+        std::string dst_type;
+        dst_type = operands[0]->getType()->toStr();
+        fprintf(yyout, "  %s = phi %s", dst.c_str(), dst_type.c_str());
+        int cnt = 0;
+        for (auto &&i : blkVec)
+        {
+            cnt++;
+            fprintf(yyout, "[ %s, %B%d]", operands[cnt]->toStr().c_str(), i->getNo());
+            if(cnt < blkVec.size())
+                fprintf(yyout, ",");
+        }
+        fprintf(yyout, "\n");
+    }else{
+        fprintf(yyout, "  phi\n");
     }
-    
 }
 
 //==================MachineCode==========================//

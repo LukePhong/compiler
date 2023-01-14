@@ -56,8 +56,8 @@ int main()
     int x[6];
     int n = 5;
     int C=10;
-    //s = KnapSack(n, w, v, x, C);
-    s = 1;
+    s = KnapSack(n, w, v, x, C);
+    // s = 1;
     putint(s);
     return 0;
 

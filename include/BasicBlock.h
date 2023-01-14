@@ -18,6 +18,9 @@ private:
     int no;
     std::vector<BasicBlock *> domFrontier;
     BasicBlock* idom = nullptr;
+    //for phi insertion
+    AllocaInstruction* inWorkListFor = nullptr;
+    AllocaInstruction* inserted = nullptr;
 
 public:
     BasicBlock(Function *);
@@ -55,6 +58,11 @@ public:
     bool theBlockInDomFrontier(BasicBlock* b) { return std::find(domFrontier.begin(), domFrontier.end(), b) != domFrontier.end(); }
     void setIdom(BasicBlock* b) { idom = b; }
     bool theBlockDomMe(BasicBlock* b);
+
+    void setInWorkListFor(AllocaInstruction* a) {inWorkListFor = a;}
+    void setInserted(AllocaInstruction* a) {inserted = a;}
+    AllocaInstruction* getInWorkListFor() {return inWorkListFor;}
+    AllocaInstruction* getInserted() {return inserted;}
 };
 
 #endif

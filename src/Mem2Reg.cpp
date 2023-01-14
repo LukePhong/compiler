@@ -196,6 +196,16 @@ void Mem2Reg::primarySimplify()
 
 void Mem2Reg::renamePass()
 {
+    // 众所周知PHI节点中要有流入数据的信息，此处用rename进行添加
+    // RenamePass做两件事：1.在空PHI节点中加入流入数据 2.处理替换掉load和store指令
+    // std::vector<RenamePassData> RenamePassWorkList;
+    // RenamePassWorkList.emplace_back(&F.front(), nullptr, std::move(values),
+    //                                 std::move(Locations));
+    // do {
+    //     RenamePassData RPD = std::move(RenamePassWorkList.back());
+    //     RenamePassWorkList.pop_back();
+    //     RenamePass(RPD.BB, RPD.Pred, RPD.Values, RPD.Locations, RenamePassWorkList);
+    // } while (RenamePassWorkList.size());
 }
 
 void Mem2Reg::genDomTree()
@@ -206,9 +216,42 @@ void Mem2Reg::genDomTree()
 
 void Mem2Reg::insertPhiNode()
 {
-    
+    vector<BasicBlock*> workList;
+    for(vector<AllocaInst>::iterator i = allocas.begin(); i != allocas.end(); i++){
+        for (auto &&blk : currFunc->getBlockList())
+        {
+            auto defBlk = (*i).info->DefiningBlocks;
+            if(std::find(defBlk.begin(), defBlk.end(), blk) == defBlk.end())
+                continue;
+            blk->setInWorkListFor((*i).inst);
+            workList.push_back(blk);
+        }
+        while (!workList.empty())
+        {
+            auto n = workList.back();
+            workList.pop_back();
+            for (auto &&df : n->getDomFrontier())
+            {
+                //TODO: 是否需要移除只有一步跳的基本块中的phi？
+                if(df->getInserted() != (*i).inst){
+                    auto phi = new PhiInstruction();      //注意！！new Inst指定基本块和insertFront不能同时使用，指定基本块自带insertBack效果，输出时会造成无限循环
+                    phiAllc[phi] = *i;
+                    df->insertFront(phi);
+                    df->setInserted((*i).inst);
+                    if(df->getInWorkListFor() != (*i).inst){
+                        df->setInWorkListFor((*i).inst);
+                        workList.push_back(df);
+                    }
+                }
+            }
+        }
+    }
+    cout<<phiAllc.size()<<endl;
 }
 
 void Mem2Reg::cleanState()
 {
+    allocas.clear();
+    phiAllc.clear();
+    NumDeadAlloca = 0;
 }

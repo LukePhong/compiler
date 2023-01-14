@@ -1,4 +1,5 @@
 #include <vector>
+#include <map>
 using namespace std;
 
 #include "DomTreeGen.h"
@@ -54,6 +55,19 @@ struct AllocaInst
     AllocaInfo* info = nullptr;
 };
 
+// 定义Renamepass的数据包结构，包括PHI节点所在的块、流入块、流入值等
+// struct RenamePassData {
+//     using ValVector = std::vector<Value *>;
+//     using LocationVector = std::vector<DebugLoc>;
+
+//     RenamePassData(BasicBlock *B, BasicBlock *P, ValVector V, LocationVector L)
+//             : BB(B), Pred(P), Values(std::move(V)), Locations(std::move(L)) {}
+
+//     BasicBlock *BB;
+//     BasicBlock *Pred;
+//     ValVector Values;
+//     LocationVector Locations;
+// };
 
 class Mem2Reg
 {
@@ -61,10 +75,9 @@ private:
     Unit* unit;
     Function *currFunc;
 
-    // vector<AllocaInstruction*> promotable;
-    // vector<AllocaInfo*> allocInfo;
-    vector<AllocaInst> allocas;
+    vector<AllocaInst> allocas; // 经过简单优化会删除一部分
     int NumDeadAlloca = 0;
+    map<Instruction*, AllocaInst> phiAllc;
 public:
     Mem2Reg(Unit* u);
     ~Mem2Reg();
