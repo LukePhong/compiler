@@ -129,3 +129,13 @@ bool BasicBlock::isInstAfterInst(Instruction* a, Instruction* b){
     }
     return false;
 }
+
+bool BasicBlock::theBlockDomMe(BasicBlock* b){
+    if(idom == nullptr)
+        return false;
+    
+    if(idom == b)
+        return true;
+
+    return idom->theBlockDomMe(b);
+}

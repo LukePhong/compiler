@@ -259,13 +259,25 @@ void DomTreeGen::pass(Function *func)
     }
     cout<<endl;
 
+    setIdom();
     ComputeDomFrontier();
-    return;
+    
+    currFunc = nullptr;
 }
 
 BasicBlock* DomTreeGen::getIdom(BasicBlock* b){
     return idxP[idom[pIdx[b]]];
 }
+
+void DomTreeGen::setIdom(){
+    for (auto &&i : currFunc->getBlockList()){
+        if(currFunc->getEntry() == i){
+            i->setIdom(nullptr);
+            continue;
+        }
+        i->setIdom(getIdom(i));
+    }
+};
 
 void DomTreeGen::ComputeDomFrontier(){
     // from Cooper's book

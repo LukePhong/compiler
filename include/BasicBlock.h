@@ -17,6 +17,7 @@ private:
     Function *parent;
     int no;
     std::vector<BasicBlock *> domFrontier;
+    BasicBlock* idom = nullptr;
 
 public:
     BasicBlock(Function *);
@@ -52,6 +53,8 @@ public:
     std::vector<BasicBlock *> getDomFrontier() { return domFrontier; }
     void addDomFrontier(BasicBlock* b) { domFrontier.push_back(b); }
     bool theBlockInDomFrontier(BasicBlock* b) { return std::find(domFrontier.begin(), domFrontier.end(), b) != domFrontier.end(); }
+    void setIdom(BasicBlock* b) { idom = b; }
+    bool theBlockDomMe(BasicBlock* b);
 };
 
 #endif

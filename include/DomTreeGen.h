@@ -310,6 +310,7 @@ public:
 private:
 	void ComputeDomFrontier();
 	BasicBlock* getIdom(BasicBlock* b);	// 返回块号
+	void setIdom();
 };
 
 

@@ -115,10 +115,10 @@ bool Mem2Reg::rewriteSingleStoreAlloca(AllocaInstruction* alloc, AllocaInfo* inf
                     info->UsingBlocks.push_back(StoreBB);
                     continue;
                 }
-            } else /*if (!DT.dominates(StoreBB, LI->getParent())) */{   // 等待建立好支配者树之后恢复，我们的支配者树只能看是否是idom、计算domfnt
+            } else if (!LI->getParent()->theBlockDomMe(StoreBB)) {   // 等待建立好支配者树之后恢复，我们的支配者树只能看是否是idom、计算domfnt
                 // 不在同一个块中，如果store不支配这个load，则也放弃处理
-                // info->UsingBlocks.push_back(LI->getParent());
-                // continue;
+                info->UsingBlocks.push_back(LI->getParent());
+                continue;
             }
         }
 
@@ -206,7 +206,7 @@ void Mem2Reg::genDomTree()
 
 void Mem2Reg::insertPhiNode()
 {
-    
+
 }
 
 void Mem2Reg::cleanState()
