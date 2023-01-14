@@ -746,7 +746,8 @@ void MachineUnit::PrintGlobalDecl()
     for(IdentifierSymbolEntry* var : unit->getGlbIds()) {
         if(var->getType()->isArrayType()) {
             if(((ArrayType*)var->getType())->getCntEleNum() == 0) {
-                fprintf(yyout, "\t.comm\t%s, 4, 4\n", var->toAsmStr().c_str());
+                ((ArrayType*)var->getType())->countEleNum();
+                fprintf(yyout, "\t.comm\t%s, %d, 4\n", var->toAsmStr().c_str(), ((ArrayType*)var->getType())->getCntEleNum() * 4);
             }
             else {
                 fprintf(yyout, "\t.global %s\n", var->toAsmStr().c_str());
@@ -761,6 +762,7 @@ void MachineUnit::PrintGlobalDecl()
                             fprintf(yyout, "\t.word %d\n", ((ConstantSymbolEntry*)value->getSymPtr())->getValueInt());
                         }
                     else{
+                        ((ArrayType*)var->getType())->countEleNum();
                         fprintf(yyout,"\t.zero %d\n", ((ArrayType*)var->getType())->getCntEleNum() * 4);
                     }
                 }
