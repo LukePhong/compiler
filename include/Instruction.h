@@ -212,11 +212,13 @@ public:
 class PhiInstruction : public Instruction
 {
 public:
-    PhiInstruction(BasicBlock *insert_bb = nullptr) : Instruction(PHI, insert_bb) {};
+    PhiInstruction(Operand *dst, BasicBlock *insert_bb = nullptr) : Instruction(PHI, insert_bb) { operands.push_back(dst); dst->setDef(this); };
     PhiInstruction(Operand *dst, std::vector<Operand *> srcVec, std::vector<BasicBlock *> blkVec, BasicBlock *insert_bb = nullptr);
     ~PhiInstruction();
     void output() const;
     void genMachineCode(AsmBuilder*);
+    size_t getNumOperands() { return operands.size(); }
+    void addIncoming(Operand* op, BasicBlock* bb) {operands.push_back(op); blkVec.push_back(bb); }
 private:
     std::vector<BasicBlock *> blkVec;
 };

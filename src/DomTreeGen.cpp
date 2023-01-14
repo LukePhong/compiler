@@ -141,9 +141,11 @@ void DominatorGraph::snca(int root, int *idom)
 
     int N;
     N = preDFSp(root, label2pre, pre2label, parent);
+#ifdef DEBUGDOM
     for (i = 0; i < 10; i++)
         printf("%d: %d\n", i, pre2label[i]);
     printf("%d, %d\n", N, parent[root]);
+#endif
 
     // N = readDFS("data.dimacs.parents", "data.dimacs.preorder", parent, pre2label, label2pre);
     // printf("%d, %d, %d, %d\n", N, parent[root], pre2label[0], label2pre[0]);
@@ -181,9 +183,10 @@ void DominatorGraph::snca(int root, int *idom)
         }
         label[i] = semi[i];
     }
+#ifdef DEBUGDOM
     printf("%d: %d\n", 1, pre2label[1]);
     printf("root: %d\n", root);
-
+#endif
     /*-----------------------------------------------------------
      | compute dominators using idom[w]=NCA(I,parent[w],sdom[w])
      *----------------------------------------------------------*/
@@ -248,6 +251,7 @@ void DomTreeGen::pass(Function *func)
     dom.buildGraph(numBlk, numArc, 1, arcArr);
     idom = new int[numBlk + 1];
     dom.snca(1, idom);
+#ifdef DEBUGDOM
     cout<<"Print idom:"<<endl;
     cnt = 0;
     for (vector<BasicBlock*>::iterator i = func->begin(); i != func->end(); i++)
@@ -258,7 +262,7 @@ void DomTreeGen::pass(Function *func)
         cout<<"the idom of "<<(*i)->getNo()<<" is "<<getIdom(*i)->getNo()<<endl;
     }
     cout<<endl;
-
+#endif
     setIdom();
     ComputeDomFrontier();
     
@@ -288,7 +292,7 @@ void DomTreeGen::ComputeDomFrontier(){
             {
                 BasicBlock *runner = *j;
                 while(runner != getIdom(i)){
-                    i->addDomFrontier(runner);
+                    runner->addDomFrontier(i);
                     runner = getIdom(runner);
                 }
             }

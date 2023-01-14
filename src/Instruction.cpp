@@ -576,7 +576,7 @@ PhiInstruction::~PhiInstruction()
 
 void PhiInstruction::output() const
 {
-    if(0){
+    if(1){
         std::string dst = operands[0]->toStr();
         std::string dst_type;
         dst_type = operands[0]->getType()->toStr();
