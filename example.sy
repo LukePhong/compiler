@@ -1,73 +1,61 @@
-/*
-a brainfuck interpreter
-reference: https://gist.github.com/maxcountryman/1699708
-*/
+const int N = 10000;
 
-// tape, input buffer, and read/write pointer
-const int TAPE_LEN = 65536, BUFFER_LEN = 32768;
-int tape[TAPE_LEN], program[BUFFER_LEN], ptr = 0;
-
-// read the input program
-void read_program() {
-  int i = 0, len = getint();
-  while (i < len) {
-    program[i] = getch();
+int long_array(int k) {
+  int a1[N];
+  int a2[N];
+  int a3[N];
+  int i = 0;
+  while (i < N) {
+    a1[i] = (i * i) % 10;
     i = i + 1;
   }
-  program[i] = 0;
-}
-
-// interpret the input program
-void interpret(int input[]) {
-  int cur_char, loop, i = 0;
-  while (input[i]) {
-    cur_char = input[i];
-    if (cur_char == 62) {
-      // '>'
-      ptr = ptr + 1;
+  i = 0;
+  while (i < N) {
+    a2[i] = (a1[i] * a1[i]) % 10;
+    i = i + 1;
+  }
+  i = 0;
+  while (i < N) {
+    a3[i] = (a2[i] * a2[i]) % 100 + a1[i];
+    i = i + 1;
+  }
+  int ans = 0;
+  i = 0;
+  while (i < N) {
+    if (i < 10) {
+      ans = (ans + a3[i]) % 1333;
+      putint(ans);
     }
-    else if (cur_char == 60) {
-      // '<'
-      ptr = ptr - 1;
+    else if (i < 20) {
+      int j = N / 2;
+      while (j < N) {
+        ans = ans + a3[i] - a1[j];
+        j = j + 1;
+      }
+      putint(ans);
     }
-    else if (cur_char == 43) {
-      // '+'
-      tape[ptr] = tape[ptr] + 1;
-    }
-    else if (cur_char == 45) {
-      // '-'
-      tape[ptr] = tape[ptr] - 1;
-    }
-    else if (cur_char == 46) {
-      // '.'
-      putch(tape[ptr]);
-    }
-    else if (cur_char == 44) {
-      // ','
-      tape[ptr] = getch();
-    }
-    else if (cur_char == 93 && tape[ptr]) {
-      // ']'
-      loop = 1;
-      while (loop > 0) {
-        i = i - 1;
-        cur_char = input[i];
-        if (cur_char == 91) {
-          // '['
-          loop = loop - 1;
+    else if (i < 30) {
+      int j = N / 2;
+      while (j < N) {
+        if (j > 2233) {
+          ans = ans + a2[i] - a1[j];
+          j = j + 1;
         }
-        else if (cur_char == 93) {
-          // ']'
-          loop = loop + 1;
+        else {
+          ans = (ans + a1[i] + a3[j]) % 13333;
+          j = j + 2;
         }
       }
+      putint(ans);
+    }
+    else {
+      ans = (ans + a3[i] * k) % 99988;
     }
     i = i + 1;
   }
+  return ans;
 }
 
 int main() {
-  read_program();
-  interpret(program);
-  return 0;
+  return long_array(9);
 }

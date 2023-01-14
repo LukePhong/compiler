@@ -652,6 +652,19 @@ void LoadInstruction::genMachineCode(AsmBuilder* builder)
             auto dst = genMachineOperand(operands[0]);
             auto src1 = genMachineReg(11);
             auto src2 = genMachineImm(dynamic_cast<TemporarySymbolEntry*>(operands[1]->getEntry())->getOffset());
+            if(dynamic_cast<TemporarySymbolEntry*>(operands[1]->getEntry())->getOffset() > 255 || dynamic_cast<TemporarySymbolEntry*>(operands[1]->getEntry())->getOffset() < -255) {
+                auto internal_reg = genMachineVReg();
+                cur_inst = new LoadMInstruction(cur_block, internal_reg, src2);
+                cur_block->InsertInst(cur_inst);
+                src2 = new MachineOperand(*internal_reg);
+                auto tmp_operand = genMachineVReg();
+                
+                cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD, tmp_operand, src1, src2);
+                cur_block->InsertInst(cur_inst);
+                
+                cur_inst = new LoadMInstruction(cur_block, dst, new MachineOperand(*tmp_operand), nullptr, LoadMInstruction::VLDR);
+                cur_block->InsertInst(cur_inst);
+            }
             cur_inst = new LoadMInstruction(cur_block, dst, src1, src2, LoadMInstruction::VLDR);
             cur_block->InsertInst(cur_inst);
         }
@@ -660,8 +673,18 @@ void LoadInstruction::genMachineCode(AsmBuilder* builder)
             auto dst = genMachineOperand(operands[0]);
             auto src1 = genMachineReg(11);
             auto src2 = genMachineImm(dynamic_cast<TemporarySymbolEntry*>(operands[1]->getEntry())->getOffset());
-            cur_inst = new LoadMInstruction(cur_block, dst, src1, src2);
-            cur_block->InsertInst(cur_inst);
+            if(dynamic_cast<TemporarySymbolEntry*>(operands[1]->getEntry())->getOffset() > 255 || dynamic_cast<TemporarySymbolEntry*>(operands[1]->getEntry())->getOffset() < -255) {
+                auto internal_reg = genMachineVReg();
+                cur_inst = new LoadMInstruction(cur_block, internal_reg, src2);
+                cur_block->InsertInst(cur_inst);
+                src2 = new MachineOperand(*internal_reg);
+                cur_inst = new LoadMInstruction(cur_block, dst, src1, src2);
+                cur_block->InsertInst(cur_inst);
+            }
+            else{
+                cur_inst = new LoadMInstruction(cur_block, dst, src1, src2);
+                cur_block->InsertInst(cur_inst);
+            }
         }
 
     }
@@ -741,6 +764,12 @@ void StoreInstruction::genMachineCode(AsmBuilder* builder)
             auto src = genMachineReg(se->getParamNumber());
             auto dst1 = genMachineReg(11);
             auto dst2 = genMachineImm(dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry())->getOffset());
+            if(dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry())->getOffset() > 255 || dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry())->getOffset() < -255) {
+            auto internal_reg = genMachineVReg();
+            cur_inst = new LoadMInstruction(cur_block, internal_reg, dst2);
+            cur_block->InsertInst(cur_inst);
+            dst2 = new MachineOperand(*internal_reg);
+        }
             cur_inst = new StoreMInstruction(cur_block, src, dst1, dst2);
             cur_block->InsertInst(cur_inst);
         }else{
@@ -777,8 +806,20 @@ void StoreInstruction::genMachineCode(AsmBuilder* builder)
         }
         auto dst1 = genMachineReg(11);
         auto dst2 = genMachineImm(dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry())->getOffset());
+        if(dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry())->getOffset() > 255 || dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry())->getOffset() < -255) {
+            auto internal_reg = genMachineVReg();
+            cur_inst = new LoadMInstruction(cur_block, internal_reg, dst2);
+            cur_block->InsertInst(cur_inst);
+            dst2 = new MachineOperand(*internal_reg);
+        }
         if(operands[1]->getType()->isFloat())
         {
+            if(dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry())->getOffset() > 255 || dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry())->getOffset() < -255) {
+                auto reg = genMachineVReg();
+                cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD, reg, dst1, dst2);
+                cur_block->InsertInst(cur_inst);
+                dst2 = reg;
+            }
             cur_inst = new StoreMInstruction(cur_block, src, dst1, dst2,StoreMInstruction::VSTR);
             cur_block->InsertInst(cur_inst);
         }
