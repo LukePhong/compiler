@@ -12,7 +12,7 @@ class BasicBlock
     typedef std::vector<BasicBlock *>::iterator bb_iterator;
 
 private:
-    std::vector<BasicBlock *> pred, succ;
+    std::vector<BasicBlock *> pred, succ;   // 每一个有pred的地方都有对应的succ关系，所以信息是重复的 只用获取一种即可
     Instruction *head;
     Function *parent;
     int no;
