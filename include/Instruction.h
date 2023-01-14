@@ -46,7 +46,7 @@ protected:
     Instruction *next;
     BasicBlock *parent;
     std::vector<Operand*> operands;
-    enum {BINARY, COND, UNCOND, RET, LOAD, STORE, CMP, ALLOCA, CALL, ZEXT, CAST};
+    enum {BINARY, COND, UNCOND, RET, LOAD, STORE, CMP, ALLOCA, CALL, ZEXT, CAST, PHI};
 };
 
 // meaningless instruction, used as the head node of the instruction list.
@@ -207,6 +207,17 @@ public:
     BitCastInstruction(Operand *dst, Operand *src, BasicBlock *insert_bb = nullptr) : ZextInstruction(dst, src, insert_bb) {};
     void output() const;
     void genMachineCode(AsmBuilder*);
+};
+
+class PhiInstruction : public Instruction
+{
+public:
+    PhiInstruction(Operand *dst, std::vector<Operand *> srcVec, std::vector<BasicBlock *> blkVec, BasicBlock *insert_bb = nullptr);
+    ~PhiInstruction();
+    void output() const;
+    void genMachineCode(AsmBuilder*);
+private:
+    std::vector<BasicBlock *> blkVec;
 };
 
 #endif

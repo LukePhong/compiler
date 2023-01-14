@@ -206,7 +206,7 @@ void Mem2Reg::genDomTree()
 
 void Mem2Reg::insertPhiNode()
 {
-
+    
 }
 
 void Mem2Reg::cleanState()

@@ -551,6 +551,46 @@ void IntFloatCastInstruction::output() const
     fprintf(yyout, "  %s = %s %s %s to %s\n", dst.c_str(), castType.c_str(), src_type.c_str(), src.c_str(), dst_type.c_str());
 }
 
+PhiInstruction::PhiInstruction(Operand *dst, std::vector<Operand *> srcVec, std::vector<BasicBlock *> blkVec, BasicBlock *insert_bb)
+    : Instruction(PHI, insert_bb), blkVec(blkVec)
+{
+    operands = srcVec;
+    operands.insert(operands.begin(), dst);
+    dst->setDef(this);
+    for (auto &&i : srcVec)
+    {
+        i->addUse(this);
+    }
+}
+
+PhiInstruction::~PhiInstruction()
+{
+    operands[0]->setDef(nullptr);
+    if(operands[0]->usersNum() == 0)
+        delete operands[0];
+    for (size_t i = 1; i < operands.size(); i++)
+    {
+        operands[i]->removeUse(this);
+    }
+}
+
+void PhiInstruction::output() const
+{
+    std::string dst = operands[0]->toStr();
+    std::string dst_type;
+    dst_type = operands[0]->getType()->toStr();
+    fprintf(yyout, "  %s = phi %s", dst.c_str(), dst_type.c_str());
+    int cnt = 0;
+    for (auto &&i : blkVec)
+    {
+        cnt++;
+        fprintf(yyout, "[ %s, %B%d]", operands[cnt]->toStr().c_str(), i->getNo());
+        if(cnt < blkVec.size())
+            fprintf(yyout, ",");
+    }
+    
+}
+
 //==================MachineCode==========================//
 MachineOperand* Instruction::genMachineOperand(Operand* ope)
 {
@@ -1445,4 +1485,7 @@ void GetElementPtrInstruction::genMachineCode(AsmBuilder* builder){
         cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD, dst, fp, dst);
         cur_block->InsertInst(cur_inst);
     }
+}
+
+void PhiInstruction::genMachineCode(AsmBuilder* builder){
 }
