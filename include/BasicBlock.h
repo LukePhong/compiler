@@ -16,6 +16,7 @@ private:
     Instruction *head;
     Function *parent;
     int no;
+    std::vector<BasicBlock *> domFrontier;
 
 public:
     BasicBlock(Function *);
@@ -47,6 +48,10 @@ public:
     int getNumOfSucc() const { return succ.size(); };
     void genMachineCode(AsmBuilder*);
     bool isInstAfterInst(Instruction* a, Instruction* b);
+
+    std::vector<BasicBlock *> getDomFrontier() { return domFrontier; }
+    void addDomFrontier(BasicBlock* b) { domFrontier.push_back(b); }
+    bool theBlockInDomFrontier(BasicBlock* b) { return std::find(domFrontier.begin(), domFrontier.end(), b) != domFrontier.end(); }
 };
 
 #endif

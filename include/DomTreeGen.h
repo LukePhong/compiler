@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <assert.h> 
 #include <math.h>
+#include <vector>
+#include <map>
+using namespace std;
 
 class DominatorGraph {
 	private:
@@ -40,7 +43,7 @@ class DominatorGraph {
 
 		//structure used for building the graph
 		typedef union {
-			int value;
+			int value;	
 			int *ptr;
 		} intptr;
 
@@ -287,11 +290,16 @@ class DominatorGraph {
 
 
 class Function;
+class BasicBlock;
 
 
 class DomTreeGen
 {
 private:
+	Function* currFunc;
+	map<BasicBlock*, int> pIdx;
+    map<int, BasicBlock*> idxP;
+	int* idom;
 
 public:
     DomTreeGen();
@@ -299,6 +307,9 @@ public:
 
 public:
     void pass(Function *func);
+private:
+	void ComputeDomFrontier();
+	BasicBlock* getIdom(BasicBlock* b);	// 返回块号
 };
 
 
