@@ -904,6 +904,7 @@ void DimArray::genCode() {
     auto type = new PointerType(trim, false, true);//这里应该剥壳一层
     auto addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
     auto addr = new Operand(addr_se); 
+    
     Operand* lastAddr;
     for (size_t i = 0; i < dimList.size(); i++)
     {
@@ -934,6 +935,8 @@ void DimArray::genCode() {
         addr = new Operand(addr_se); 
     }
     dst = lastAddr;
+    
+    
 }
 
 void ArrayDef::genCode() {
@@ -1108,7 +1111,10 @@ void ArrayIndex::genCode() {
     BasicBlock *bb = builder->getInsertBB();
     Function *func = bb->getParent();
     flag.arrayIdStk.push((IdentifierSymbolEntry*)arrDef);
+    bool temp = flag.isOuterCond;
+    flag.isOuterCond = false;
     dim->genCode();
+    flag.isOuterCond = temp;
     flag.arrayIdStk.pop();
     // Operand *addr = dynamic_cast<IdentifierSymbolEntry*>(arrDef)->getAddr();
     new LoadInstruction(dst, dim->getDst(), bb);
