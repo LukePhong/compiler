@@ -622,6 +622,14 @@ MachineOperand* Instruction::genMachineOperand(Operand* ope)
     //TODO: 全局常量可能需要调整
     auto se = ope->getEntry();
     MachineOperand* mope = nullptr;
+    // 如果是实参的话
+    if(IdentifierSymbolEntry* id_se = dynamic_cast<IdentifierSymbolEntry*>(se)){
+        if(id_se->isParam() && id_se->getParamNumber() < 4){
+            mope = genMachineReg(id_se->getParamNumber());
+            return mope;
+        }
+    }
+
     if(se->isConstant() && se->getType()->isNumber()){
         // 当心精度损失！！！  用fval保存浮点型
         if(((ConstantSymbolEntry*)se)->isInt())
@@ -833,6 +841,7 @@ void StoreInstruction::genMachineCode(AsmBuilder* builder)
         
     }
     // Load function params 该分支必须位于local operand之下，isParam()可能不准确，导致两个分支同时成立
+    // TODO: 改成使用dycast判断并测试
     else if(!operands[1]->getEntry()->isTemporary() && !operands[1]->getEntry()->isConstant()
          && ((IdentifierSymbolEntry*)(operands[1]->getEntry()))->isParam()){
         auto se = ((IdentifierSymbolEntry*)(operands[1]->getEntry()));
