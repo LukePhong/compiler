@@ -103,7 +103,7 @@ test:app
 		OUT=$${file%.*}.out
 		FILE=$${file##*/}
 		FILE=$${FILE%.*}
-		timeout 5s $(BINARY) $${file} -o $${ASM} -S 2>$${LOG}
+		timeout 5s $(BINARY) $${file} -o $${ASM} -S -O2 2>$${LOG}
 		RETURN_VALUE=$$?
 		if [ $$RETURN_VALUE = 124 ]; then
 			echo "\033[1;31mFAIL:\033[0m $${FILE}\t\033[1;31mCompile Timeout\033[0m"

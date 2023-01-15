@@ -12,10 +12,15 @@ class BasicBlock
     typedef std::vector<BasicBlock *>::iterator bb_iterator;
 
 private:
-    std::vector<BasicBlock *> pred, succ;
+    std::vector<BasicBlock *> pred, succ;   // 每一个有pred的地方都有对应的succ关系，所以信息是重复的 只用获取一种即可
     Instruction *head;
     Function *parent;
     int no;
+    std::vector<BasicBlock *> domFrontier;
+    BasicBlock* idom = nullptr;
+    //for phi insertion
+    AllocaInstruction* inWorkListFor = nullptr;
+    AllocaInstruction* inserted = nullptr;
 
 public:
     BasicBlock(Function *);
@@ -23,6 +28,7 @@ public:
     void insertFront(Instruction *);
     void insertBack(Instruction *);
     void insertBefore(Instruction *, Instruction *);
+    void insertBackBeforeCompAndBr(Instruction *);
     void remove(Instruction *);
     bool empty() const { return head->getNext() == head;}
     void output() const;
@@ -46,6 +52,18 @@ public:
     int getNumOfPred() const { return pred.size(); };
     int getNumOfSucc() const { return succ.size(); };
     void genMachineCode(AsmBuilder*);
+    bool isInstAfterInst(Instruction* a, Instruction* b);
+
+    std::vector<BasicBlock *> getDomFrontier() { return domFrontier; }
+    void addDomFrontier(BasicBlock* b) { domFrontier.push_back(b); }
+    bool theBlockInDomFrontier(BasicBlock* b) { return std::find(domFrontier.begin(), domFrontier.end(), b) != domFrontier.end(); }
+    void setIdom(BasicBlock* b) { idom = b; }
+    bool theBlockDomMe(BasicBlock* b);
+
+    void setInWorkListFor(AllocaInstruction* a) {inWorkListFor = a;}
+    void setInserted(AllocaInstruction* a) {inserted = a;}
+    AllocaInstruction* getInWorkListFor() {return inWorkListFor;}
+    AllocaInstruction* getInserted() {return inserted;}
 };
 
 #endif

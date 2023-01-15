@@ -56,6 +56,7 @@
         "*.def": "cpp",
         "ctime": "cpp",
         "iomanip": "cpp",
+<<<<<<< HEAD
         "ios": "cpp",
         "xlocale": "cpp",
         "xstring": "cpp",
@@ -73,5 +74,13 @@
         "xtr1common": "cpp",
         "xtree": "cpp",
         "xutility": "cpp"
+=======
+        "chrono": "cpp",
+        "condition_variable": "cpp",
+        "ratio": "cpp",
+        "mutex": "cpp",
+        "shared_mutex": "cpp",
+        "thread": "cpp"
+>>>>>>> optimization
     }
 }

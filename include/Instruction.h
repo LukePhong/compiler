@@ -19,6 +19,7 @@ public:
     bool isCond() const {return instType == COND;};
     bool isAlloc() const {return instType == ALLOCA;};
     bool isRet() const {return instType == RET;};
+    bool isCmp() const { return instType == CMP; }
     void setParent(BasicBlock *);
     void setNext(Instruction *);
     void setPrev(Instruction *);
@@ -32,6 +33,13 @@ public:
     MachineOperand* genMachineLabel(int block_no);
     virtual void genMachineCode(AsmBuilder*) = 0;
     std::vector<Operand*>& getOperands() { return operands; }
+    // 这是在后期优化时用于分析的，返回一个需要的类型，欢迎重载
+    Type* getType() { return nullptr; }
+    // 我们把这条指令从基本块里删除
+    void removeCurrInst();
+    // 这就意味着必须每一条指令的op必须全部来自operands
+    // 替换operands中的指针并重新设置use关系
+    bool changeOperand(Operand* op, Operand* old);
 protected:
     unsigned instType;
     unsigned opcode;
@@ -39,7 +47,7 @@ protected:
     Instruction *next;
     BasicBlock *parent;
     std::vector<Operand*> operands;
-    enum {BINARY, COND, UNCOND, RET, LOAD, STORE, CMP, ALLOCA, CALL, ZEXT, CAST};
+    enum {BINARY, COND, UNCOND, RET, LOAD, STORE, CMP, ALLOCA, CALL, ZEXT, CAST, PHI, COPY};
 };
 
 // meaningless instruction, used as the head node of the instruction list.
@@ -58,6 +66,7 @@ public:
     ~AllocaInstruction();
     void output() const;
     void genMachineCode(AsmBuilder*);
+    Type* getType() { return se->getType(); }   // 我们不返回指针类型
 private:
     SymbolEntry *se;
 };
@@ -69,6 +78,9 @@ public:
     ~LoadInstruction();
     void output() const;
     void genMachineCode(AsmBuilder*);
+    Type* getType() { return operands[0]->getType(); }
+    // 所有用到了我的dst的地方，你们use这个op吧
+    void replaceAllUsesWith(Operand* op);
 };
 
 class GetElementPtrInstruction : public LoadInstruction
@@ -77,8 +89,9 @@ public:
     GetElementPtrInstruction(Operand *dst, Operand *src_addr, Operand * dim, /*bool isParam = false,*/ BasicBlock *insert_bb = nullptr, IdentifierSymbolEntry* ident = nullptr);
     void output() const;
     void genMachineCode(AsmBuilder*);
+    bool isZeroDim();
 private:
-    Operand * dim;
+    // Operand * dim;
     // bool isParam = false;
     IdentifierSymbolEntry* arr;
 };
@@ -90,6 +103,8 @@ public:
     ~StoreInstruction();
     void output() const;
     void genMachineCode(AsmBuilder*);
+    Type* getType() { return operands[1]->getType(); }
+    bool isStoringGlobalVal() { return operands[1]->getEntry()->isVariable() && ((IdentifierSymbolEntry*)operands[1]->getEntry())->isGlobal(); }
 };
 
 class BinaryInstruction : public Instruction
@@ -191,6 +206,30 @@ class BitCastInstruction : public ZextInstruction
 {
 public:
     BitCastInstruction(Operand *dst, Operand *src, BasicBlock *insert_bb = nullptr) : ZextInstruction(dst, src, insert_bb) {};
+    void output() const;
+    void genMachineCode(AsmBuilder*);
+};
+
+class PhiInstruction : public Instruction
+{
+public:
+    PhiInstruction(Operand *dst, BasicBlock *insert_bb = nullptr) : Instruction(PHI, insert_bb) { operands.push_back(dst); dst->setDef(this); };
+    PhiInstruction(Operand *dst, std::vector<Operand *> srcVec, std::vector<BasicBlock *> blkVec, BasicBlock *insert_bb = nullptr);
+    ~PhiInstruction();
+    void output() const;
+    void genMachineCode(AsmBuilder*);
+    size_t getNumOperands() { return operands.size(); }
+    std::vector<BasicBlock *> getBlkVec() { return blkVec; }
+    void addIncoming(Operand* op, BasicBlock* bb) {operands.push_back(op); blkVec.push_back(bb); }
+private:
+    std::vector<BasicBlock *> blkVec;
+};
+
+class CopyInstruction : public Instruction
+{
+public:
+    CopyInstruction(Operand *dst, Operand *src, BasicBlock *insert_bb = nullptr);
+    ~CopyInstruction();
     void output() const;
     void genMachineCode(AsmBuilder*);
 };

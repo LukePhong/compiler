@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 const int N = 10000;
 
 int long_array(int k) {
@@ -59,3 +60,16 @@ int long_array(int k) {
 int main() {
   return long_array(9);
 }
+=======
+int a;
+int func(int p){
+	p = p - 1;
+	return p;
+}
+int main(){
+	int b;
+	a = 10;
+	b = func(a);
+	return b;
+}
+>>>>>>> optimization

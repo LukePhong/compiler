@@ -7,6 +7,7 @@
 #include "SymbolTable.h"
 #include "MachineCode.h"
 #include "LinearScan.h"
+#include "Mem2Reg.h"
 using namespace std;
 
 Ast ast;
@@ -24,11 +25,13 @@ bool dump_tokens;
 bool dump_ast;
 bool dump_ir;
 bool dump_asm;
+bool use_opti;
+int opt_level;
 
 int main(int argc, char *argv[])
 {
     int opt;
-    while ((opt = getopt(argc, argv, "Siato:")) != -1)
+    while ((opt = getopt(argc, argv, "O::Siato:")) != -1)
     {
         switch (opt)
         {
@@ -46,6 +49,10 @@ int main(int argc, char *argv[])
             break;
         case 'S':
             dump_asm = true;
+            break;
+        case 'O':
+            use_opti = true;
+            opt_level = atoi(optarg);
             break;
         default:
             fprintf(stderr, "Usage: %s [-o outfile] infile\n", argv[0]);
@@ -168,6 +175,11 @@ int main(int argc, char *argv[])
         ast.output();
     ast.typeCheck();
     ast.genCode(&unit);
+    // 务必注意！mem2reg优化的是IR
+    if(use_opti){
+        Mem2Reg m2r(&unit);
+        m2r.buildSSA();
+    }
     if(dump_ir)
         unit.output();
     mUnit.setUnit(&unit);
