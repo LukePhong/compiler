@@ -161,43 +161,44 @@ void LinearScan::computeLiveIntervals()
     sort(intervals.begin(), intervals.end(), compareStart);
 }
 
+// 需要补充
 bool LinearScan::linearScanRegisterAllocation()
 {
     bool retValue = true;
     active.clear();
     regs.clear();
     fregs.clear();
+    // 初始化所有的寄存器都是可分配的
     for (int i = 4; i < 11; i++)
         regs.push_back(i);
     for (int i = 21; i < 48; i++)
         fregs.push_back(i);
+    // 尝试为全部的活跃区间分配寄存器
     for(auto &interval : intervals){
         expireOldIntervals(interval);
         //判断 active 列表中 interval 的数目和可用的物理寄存器数目是否相等
-        if(interval->freg){
-            if(fregs.size() == 0){//溢出
+        if(interval->freg){ // 需要的是浮点寄存器
+            // 剩余寄存器数目为0，说明溢出了
+            if(fregs.size() == 0){
                 spillAtInterval(interval);
                 retValue = false;
             }
             else{//当前有可用于分配的物理寄存器
                 interval->rreg = fregs[fregs.size()-1];//为 unhandled interval 分配物理寄存器
                 fregs.pop_back();
-                active.push_back(interval);
-                sort(active.begin(), active.end(), insertComp);
+                active.push_back(interval); //该interval变为active
+                sort(active.begin(), active.end(), insertComp); //保持结束位置递增排列
             }
         }
-        else{
-            if(regs.size() == 0){//溢出
+        else{   // 需要的是普通寄存器
+            if(regs.size() == 0){
                 spillAtInterval(interval);
-                // printf("%d\t%d\n", interval->start, interval->end);
                 retValue = false;
             }
             else{//当前有可用于分配的物理寄存器
                 interval->rreg = regs[regs.size()-1];//为 unhandled interval 分配物理寄存器
                 regs.pop_back();
                 //再按照活跃区间结束位置，将其插入到 active 列表中
-                // std::vector<Interval*>::iterator insertPos = std::lower_bound(active.begin(), active.end(), interval, insertComp);
-                // active.insert(insertPos, interval);//按照unhandled interval活跃区间结束位置，将其插入到 active 列表中
                 active.push_back(interval);
                 sort(active.begin(), active.end(), insertComp);
             }
@@ -207,7 +208,9 @@ bool LinearScan::linearScanRegisterAllocation()
 }
 
 void LinearScan::modifyCode()
-{
+{   
+    //对于生存区间内的每一个def、use进行更改
+    //无需更改
     for (auto &interval : intervals)
     {
         func->addSavedRegs(interval->rreg);
@@ -231,7 +234,7 @@ void LinearScan::genSpillCode()
          * 2. insert str inst after the def of vreg
          */ 
         // The vreg should be spilled to memory.
-        interval->disp = func->AllocSpace(4);//正数！
+        interval->disp = func->AllocSpace(4);
         // 1. insert ldr inst before the use of vreg
         for (auto use : interval->uses){
             MachineBlock* block = use->getParent()->getParent();
@@ -259,20 +262,24 @@ void LinearScan::genSpillCode()
 
 void LinearScan::expireOldIntervals(Interval *interval)
 {
+
     for(std::vector<Interval*>::iterator it = active.begin(); it != active.end(); ){
-        if(!victimComp(*it, interval)){
+        // 考虑排列顺序，如果最早结束的都要比目标区间的开始时间晚，那么就返回
+        if(!((*it)->end < interval->start)){
             return;
         }
         //rreg
         if ((*it)->rreg < 11) {
-            regs.push_back((*it)->rreg);//释放寄存器
-            it = active.erase(find(active.begin(), active.end(), *it));//注意此处的迭代方式
+            //释放寄存器
+            regs.push_back((*it)->rreg);
+            //将不影响后续interval的active抛弃掉，一定和寄存器同步修改
+            it = active.erase(find(active.begin(), active.end(), *it));
             sort(regs.begin(), regs.end());
         }
         //freg
         else{
-            fregs.push_back((*it)->rreg);//释放寄存器
-            it = active.erase(find(active.begin(), active.end(), *it));//注意此处的迭代方式
+            fregs.push_back((*it)->rreg);
+            it = active.erase(find(active.begin(), active.end(), *it));
             sort(fregs.begin(), fregs.end()); 
         }
     }
@@ -280,12 +287,12 @@ void LinearScan::expireOldIntervals(Interval *interval)
 
 void LinearScan::spillAtInterval(Interval *interval)
 {
-    if(active[active.size()-1]->end <= interval->end){//unhandled interval 的结束时间更晚
-        interval->spill = true;//只需要置位其 spill 标志位
+    if(active[active.size()-1]->end <= interval->end){  //unhandled interval 的结束时间更晚
+        interval->spill = true; //只需要置位其 spill 标志位
     }
-    else{// active 列表中的 interval 结束时间更晚
-        active[active.size()-1]->spill = true;//置位其spill标志位
-        interval->rreg = active[active.size()-1]->rreg;//将其占用的寄存器分配给 unhandled interval
+    else{   // active 列表中的 interval 结束时间更晚
+        active[active.size()-1]->spill = true;  //置位其spill标志位
+        interval->rreg = active[active.size()-1]->rreg; //将其占用的寄存器分配给 unhandled interval
         //按照unhandled interval活跃区间结束位置，将其插入到 active 列表中
         active.push_back(interval);
         sort(active.begin(), active.end(), insertComp);
