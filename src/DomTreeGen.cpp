@@ -69,14 +69,6 @@ void DominatorGraph::buildGraph(int _nvertices, int _narcs, int _source, int *ar
 
     onarcs = narcs;
 
-    // eliminate duplicate arcs
-    //  if (remove_duplicates) {
-    //          //fprintf (stderr, "Eliminating duplicates...\n");
-    //          eliminateDuplicates(first_in, in_arcs);
-    //          eliminateDuplicates(first_out, out_arcs);
-    //          narcs = first_in[n+1].value;
-    //  }
-
     // convert indices to pointers for faster accesses
     for (int v = 1; v <= n + 1; v++)
     {
@@ -139,20 +131,17 @@ void DominatorGraph::snca(int root, int *idom)
     for (i = n; i >= 0; i--)
         label[i] = semi[i] = i;
 
+    // 前序DFS遍历，构造生成树
     int N;
     N = preDFSp(root, label2pre, pre2label, parent);
+
 #ifdef DEBUGDOM
     for (i = 0; i < 10; i++)
         printf("%d: %d\n", i, pre2label[i]);
     printf("%d, %d\n", N, parent[root]);
 #endif
 
-    // N = readDFS("data.dimacs.parents", "data.dimacs.preorder", parent, pre2label, label2pre);
-    // printf("%d, %d, %d, %d\n", N, parent[root], pre2label[0], label2pre[0]);
-
-    /*----------------
-     | semidominators
-     *---------------*/
+    // 递归计算semidominators
     for (i = N; i > 1; i--)
     {
         int *p, *stop;
@@ -187,9 +176,8 @@ void DominatorGraph::snca(int root, int *idom)
     printf("%d: %d\n", 1, pre2label[1]);
     printf("root: %d\n", root);
 #endif
-    /*-----------------------------------------------------------
-     | compute dominators using idom[w]=NCA(I,parent[w],sdom[w])
-     *----------------------------------------------------------*/
+
+    // 使用引理计算idom
     dom[1] = 1;
     idom[root] = root;
     for (i = 2; i <= N; i++)
@@ -263,8 +251,9 @@ void DomTreeGen::pass(Function *func)
     }
     cout<<endl;
 #endif
-    setIdom();
-    ComputeDomFrontier();
+
+    setIdom();  //保存idom信息
+    ComputeDomFrontier();   //计算DF
     
     currFunc = nullptr;
 }

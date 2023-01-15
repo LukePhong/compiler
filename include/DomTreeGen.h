@@ -83,86 +83,6 @@ class DominatorGraph {
 			n = narcs = source = 0;
 		}
 
-		inline int log2 (int x) {
-			return (int) ceil (log((double)x) / log(2.0));
-		}
-
-
-		/*----------------------------------------
-		 | Eliminate duplicate arcs:
-		 | - Changes both 'first' and 'arcs'.
-		 | - assumes 'first' uses the int fields.
-		 | - 'arcs' will still be contiguous.
-		 *---------------------------------------*/
-
-		void eliminateDuplicates(intptr *first, int *arcs);
-
-
-		/*---------------------------------------
-		 | compress operation: recursive version
-		 *--------------------------------------*/
-
-		inline void rcompress (int v, int *ancestor, int *label) {
-			int t;
-			incc();
-			if (ancestor[t=ancestor[v]]) {
-				rcompress(t,ancestor,label); //ancestor[v] does not change					
-				incc();
-				if (label[t]<label[v]) {label[v] = label[t];}
-				ancestor[v] = ancestor[t];
-			}
-		}
-
-
-		/*------------------------------------------------------------
-		 | compress used by LT: compresses the path rootF(v)->v in 
-		 | the link-eval forest
-		 *-----------------------------------------------------------*/
-
-		inline void lt_compress(int v, int *ancestor, int *semi, int *label) {
-			int t;
-			incc();
-			if (ancestor[t=ancestor[v]]) {
-				lt_compress (t, ancestor, semi, label); //ancestor[v] does not change
-				incc();
-				if (semi[label[t]] < semi[label[v]]) {label[v] = label[t];}
-				ancestor[v] = ancestor[t];
-			 }
-		}
-
-
-		/*--------------------------------------------------------
-		 | compress used by slt: recursive and iterative versions
-		 *-------------------------------------------------------*/
-
-		inline void rcompress (int v, int *parent, int *semi, int *label, int c) {
-			int p;
-			incc();
-			if ((p=parent[v]) > c) {
-				rcompress (p, parent, semi, label, c);
-				incc();
-				if (semi[label[p]] < semi[label[v]]) label[v] = label[p];
-				parent[v] = parent[p];
-			}
-		}
-
-
-		/*------------------------------------------------------------
-		 | compresses the path rootF(v)->v in the link-eval forest F;
-         | rootF(v) is the root of the tree in F that contains v 
-		 *-----------------------------------------------------------*/
-		inline void rcompress(int v, int *ancestor, int *semi, int *label) {
-			int t;
-			incc();
-			if (ancestor[t=ancestor[v]]) {
-				rcompress(t, ancestor, semi, label); //ancestor[v] does not change
-				incc();
-				if (semi[label[t]]<semi[label[v]]) {label[v]=label[t];}
-				ancestor[v] = ancestor[t];
-			}
-	    }
-
-
 		inline void rcompress (int v, int *parent, int *label, int c) {
 			incc();
 			int p;
@@ -173,51 +93,6 @@ class DominatorGraph {
 				parent[v] = parent[p];
 			}
 		}
-
-		inline void lt_neg_compress(int v, int *ancestor, int *semi, int *label) {
-			int t;
-			incc();
-			if (ancestor[t=ancestor[v]] > 0) {
-				//lt_compress(ancestor[v], ancestor, semi, label);
-				incc();
-				lt_neg_compress (t, ancestor, semi, label);
-				if (semi[label[t]] < semi[label[v]]) {label[v] = label[t];}
-				ancestor[v] = ancestor[t];
-			 }
-		}
-
-		void lt_neg_link(int v, int w, int *semi, int *label, int *ancestor, int *size);
-		int lt_neg_eval (int v, int *ancestor, int *semi, int *label);
-
-
-		/*-------------------------------------------------------------------
-		 | finds the nearest common ancestor of v1 and v2 in the approximate
-	     | dominators tree represented by the array dom. First function uses
-		 | post-ids, the second uses pre-ids.
-		 *------------------------------------------------------------------*/		
-		
-		 inline int intersect (int v1, int v2, int *dom) {
-			do {
-				incc(); //outer test
-				while (v1<v2) {incc(); v1 = dom[v1];}
-				incc(); //failed above
-				while (v2<v1) {incc(); v2 = dom[v2];}
-				incc(); //failed above
-			} while (v1!=v2);
-			return v1;
-		}
-
-		inline int preIntersect(int v1, int v2, int *dom) {
-			do {
-				incc();
-				while (v1>v2) {incc(); v1 = dom[v1];}
-				incc();
-				while (v2>v1) {incc(); v2 = dom[v2];}
-				incc();
-			} while (v1!=v2);
-			return v1;
-	    }
-
 	
 	public:
 		int ccount; //comparison counter
@@ -229,62 +104,17 @@ class DominatorGraph {
 		inline int getOriginalNArcs() const {return onarcs;}
 		inline int getSource() const {return source;}
 
-		/*---------
-		 | outputs 
-		 *--------*/
-		void output (FILE *file, bool reverse);
-		void outputGraphStatistics (FILE *file);
-
 		/*-----------------------------
 		 | initialization / destructor 
 		 *----------------------------*/
 		DominatorGraph() {reset();}
 		void buildGraph (int _nvertices, int _narcs, int _source, int *arclist); //from list of arcs
-		// void readDimacs (const char *filename, bool reverse, bool simplify); //from file
 		~DominatorGraph() {deleteAll();}
-
-		void destroy() {
-			deleteAll();
-			reset();
-		}
-
-		/*---------------------------------
-		 | several variants of dfs and bfs
-		 *--------------------------------*/
-		void rpostDFS (int v, PostDFSParams &params);
-		int postDFS (int v, int *label2post, int *post2label);
-
-		void rpostDFSp (int v, PostDFSParams &params);
-		int postDFSp (int v, int *label2post, int *post2label, int *parent);
 
 		void rpreDFSp (int v, PreDFSParams &params);
 		int preDFSp (int v, int *label2pre, int *pre2label, int *parent);
 
-
-		int preBFSp (int v, int *label2pre, int *pre2label, int *parent);
-
-		/*------------------
-		 | basic algorithms 
-		 *-----------------*/
-		 void slt (int r, int *idom);  //former slt_v4
-		 void lt (int r, int *idom);   //former lt_neg
-		 void ibfs (int r, int *idom); //former iter_v3
-		 void idfs (int r, int *idom); //former iter_base
-		 void snca (int r, int *idom); //former snca_v2
-
-
-		/*---------------------
-		 | baseline algorithms
-		 *--------------------*/
-		int semi_dominators (int r);
-		int run_dfs (int r); 
-		int run_bfs (int r);
-
-		/*-----------------
-		 | link-eval stuff
-		 *----------------*/
-		int lt_eval (int v, int *ancestor, int *semi, int *label);
-		void lt_link(int v, int w, int *semi, int *label, int *ancestor, int *child, int *size);
+		void snca (int r, int *idom); //former snca_v2
 
 };
 
