@@ -276,6 +276,11 @@ void FunctionDef::genCode()
         params->genCode();
     }
     stmt->genCode();
+    //加入的ret void
+    if(this->voidAddRet!=nullptr)
+    {
+        this->voidAddRet->genCode();
+    }
     //q4为function加入exit块
     // 为返回地址分配储存空间，不应该在return处，因为应该一个函数只执行一遍
     if(retAddr){
@@ -303,7 +308,7 @@ void FunctionDef::genCode()
             if(j->isRet()){
                 shouldErase = true;
                 //返回常量的特殊情况
-                if(j->getOperands()[0]->getSymbolEntry()->isConstant()){
+                if(!this->voidAddRet && j->getOperands()[0]->getSymbolEntry()->isConstant()){
                     // new StoreInstruction(retAddr, j->getOperands()[0], i);
                     isConstVec.push_back(j->getOperands()[0]);
                 }else{
@@ -489,6 +494,17 @@ void BinaryExpr::genCode()
 void Constant::genCode()
 {
     // we don't need to generate code.
+    BasicBlock *bb = builder->getInsertBB();
+    Function *func = bb->getParent();
+    // 不是最外层的const是不能调用的
+    if(flag.isUnderCond && flag.isOuterCond){
+        BasicBlock *falseBlock;
+        falseBlock = new BasicBlock(func);
+        auto ret = typeConvention(TypeSystem::boolType, dst, bb);
+        true_list.push_back(new CondBrInstruction(nullptr, falseBlock, ret, bb));
+        // without it break for the same reason but found at toBB_f->addPred(i);
+        false_list.push_back(new UncondBrInstruction(nullptr, falseBlock)); // when && break at a CondBrInstruction miss false_branch found at output and none of block end with CondBrInstruction
+    }
 }
 
 void Id::genCode()
@@ -777,6 +793,8 @@ void FuncCall::genCode() {
     //q2补全代码生成调用链
     auto paramTypes = ((FunctionType*)(funcDef->getType()))->getParamsType();
     int cnt = 0;
+    bool tempflag = flag.isOuterCond;
+    flag.isOuterCond = false;
     for (auto &&i : arg)
     {
         i->genCode();
@@ -786,6 +804,7 @@ void FuncCall::genCode() {
         params.push_back(dst);
         cnt++;
     }
+    flag.isOuterCond = tempflag;
     //q5FunctionCall的代码生成
     new FunctionCallInstuction(dst, params, funcDef, bb);
     
@@ -885,6 +904,7 @@ void DimArray::genCode() {
     auto type = new PointerType(trim, false, true);//这里应该剥壳一层
     auto addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
     auto addr = new Operand(addr_se); 
+    
     Operand* lastAddr;
     for (size_t i = 0; i < dimList.size(); i++)
     {
@@ -915,6 +935,8 @@ void DimArray::genCode() {
         addr = new Operand(addr_se); 
     }
     dst = lastAddr;
+    
+    
 }
 
 void ArrayDef::genCode() {
@@ -1089,7 +1111,10 @@ void ArrayIndex::genCode() {
     BasicBlock *bb = builder->getInsertBB();
     Function *func = bb->getParent();
     flag.arrayIdStk.push((IdentifierSymbolEntry*)arrDef);
+    bool temp = flag.isOuterCond;
+    flag.isOuterCond = false;
     dim->genCode();
+    flag.isOuterCond = temp;
     flag.arrayIdStk.pop();
     // Operand *addr = dynamic_cast<IdentifierSymbolEntry*>(arrDef)->getAddr();
     new LoadInstruction(dst, dim->getDst(), bb);
@@ -1218,6 +1243,11 @@ void FunctionDef::typeCheck()
             std::cout<<"错误！返回类型为非空的函数应有return语句！"<<std::endl;
         }
         flag.haveReturn = false;
+    }
+    //若返回void类型但没有写return语句，需要加上（否则false_block为空导致错误
+    if(!flag.haveReturn && flag.shouldReturn->isVoid())
+    {
+        this->voidAddRet = new ReturnStmt(nullptr);
     }
     flag.isInFunc = false;
 }
@@ -1797,6 +1827,10 @@ void FunctionDef::output(int level)
         params->output(level + 4);
     }
     stmt->output(level + 4);
+    if(voidAddRet!=nullptr)
+    {
+        voidAddRet->output(level + 4);
+    }
 }
 //q10添加参数列表
 void FuncParam::addNext(StmtNode* next)

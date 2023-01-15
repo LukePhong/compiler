@@ -369,6 +369,8 @@ private:
 
     //q4为function加入exit块
     Operand* retAddr;
+    //只能放在所有成员的最后（否则Segment fault不知道为什么
+    StmtNode *voidAddRet = nullptr;
 public:
     FunctionDef(SymbolEntry *se, StmtNode *params, StmtNode *stmt) : se(se), params(params), stmt(stmt)
         { 
