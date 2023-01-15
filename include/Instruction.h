@@ -19,6 +19,7 @@ public:
     bool isCond() const {return instType == COND;};
     bool isAlloc() const {return instType == ALLOCA;};
     bool isRet() const {return instType == RET;};
+    bool isCmp() const { return instType == CMP; }
     void setParent(BasicBlock *);
     void setNext(Instruction *);
     void setPrev(Instruction *);
@@ -46,7 +47,7 @@ protected:
     Instruction *next;
     BasicBlock *parent;
     std::vector<Operand*> operands;
-    enum {BINARY, COND, UNCOND, RET, LOAD, STORE, CMP, ALLOCA, CALL, ZEXT, CAST, PHI};
+    enum {BINARY, COND, UNCOND, RET, LOAD, STORE, CMP, ALLOCA, CALL, ZEXT, CAST, PHI, COPY};
 };
 
 // meaningless instruction, used as the head node of the instruction list.
@@ -218,9 +219,19 @@ public:
     void output() const;
     void genMachineCode(AsmBuilder*);
     size_t getNumOperands() { return operands.size(); }
+    std::vector<BasicBlock *> getBlkVec() { return blkVec; }
     void addIncoming(Operand* op, BasicBlock* bb) {operands.push_back(op); blkVec.push_back(bb); }
 private:
     std::vector<BasicBlock *> blkVec;
+};
+
+class CopyInstruction : public Instruction
+{
+public:
+    CopyInstruction(Operand *dst, Operand *src, BasicBlock *insert_bb = nullptr);
+    ~CopyInstruction();
+    void output() const;
+    void genMachineCode(AsmBuilder*);
 };
 
 #endif

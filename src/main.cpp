@@ -184,8 +184,8 @@ int main(int argc, char *argv[])
         unit.output();
     mUnit.setUnit(&unit);
     unit.genMachineCode(&mUnit);
-    // LinearScan linearScan(&mUnit);
-    // linearScan.allocateRegisters();
+    LinearScan linearScan(&mUnit);
+    linearScan.allocateRegisters();
     if(dump_asm)
         mUnit.output();
     return 0;

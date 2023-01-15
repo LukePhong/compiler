@@ -24,6 +24,7 @@ void Mem2Reg::buildSSA(){
         primarySimplify();
         insertPhiNode();
         renamePass();
+        dePhi();
         cleanState();
     }
 }
@@ -354,6 +355,8 @@ void Mem2Reg::renamePass()
         RenamePassWorkList.pop_back();
         renamePassBody(RPD.BB, RPD.Pred, RPD.Values, RenamePassWorkList);
     } while (RenamePassWorkList.size());
+
+    //TODO: 删掉没用的alloc
 }
 
 void Mem2Reg::genDomTree()
@@ -397,6 +400,26 @@ void Mem2Reg::insertPhiNode()
         }
     }
     // cout<<phiAllc.size()<<endl;
+}
+
+void Mem2Reg::dePhi()
+{
+    // go over each BB
+    for (auto &&currBlk : currFunc->getBlockList()){
+        if (PhiInstruction *phiInst = dynamic_cast<PhiInstruction *>(currBlk->begin())) {
+            do{
+                int cnt = 0;
+                for (auto &&blk : phiInst->getBlkVec())
+                {
+                    cnt++;
+                    auto inst = new CopyInstruction(phiInst->getOperands()[0], phiInst->getOperands()[cnt]);
+                    blk->insertBackBeforeCompAndBr(inst);
+                }
+                //如果下一条不是phi节点了，phiInst会变成null
+                phiInst = dynamic_cast<PhiInstruction *>(phiInst->getNext());
+            }while(phiInst);
+        }
+    }
 }
 
 void Mem2Reg::cleanState()

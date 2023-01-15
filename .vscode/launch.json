@@ -11,8 +11,8 @@
             "program": "${workspaceFolder}/build/compiler", // 调试的程序位置，是你实际makefile生成的程序
             "args": [
                 "-o",
-                "example.ll",
-                "-i",
+                "example.s",
+                "-S",
                 "example.sy",
                 "-O2"
             ],

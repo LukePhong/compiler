@@ -28,6 +28,7 @@ public:
     void insertFront(Instruction *);
     void insertBack(Instruction *);
     void insertBefore(Instruction *, Instruction *);
+    void insertBackBeforeCompAndBr(Instruction *);
     void remove(Instruction *);
     bool empty() const { return head->getNext() == head;}
     void output() const;

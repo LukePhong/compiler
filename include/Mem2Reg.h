@@ -92,7 +92,7 @@ public:
 private:
     void promoteMemoryToRegister();
     void primarySimplify(), analyzeAlloca();
-    void genDomTree(), insertPhiNode(), renamePass(), cleanState();
+    void genDomTree(), insertPhiNode(), renamePass(), dePhi(), cleanState();
     bool isPromotable(AllocaInstruction* alloc),
         rewriteSingleStoreAlloca(AllocaInstruction* alloc, AllocaInfo* info);
     void renamePassBody(BasicBlock *BB, BasicBlock *Pred,

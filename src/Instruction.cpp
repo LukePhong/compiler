@@ -595,6 +595,27 @@ void PhiInstruction::output() const
     }
 }
 
+CopyInstruction::CopyInstruction(Operand *dst, Operand *src, BasicBlock *insert_bb)
+    : Instruction(COPY, insert_bb)
+{
+    operands.push_back(dst);
+    operands.push_back(src);
+    dst->setDef(this);
+    src->addUse(this);
+}
+
+CopyInstruction::~CopyInstruction()
+{
+    operands[0]->setDef(nullptr);
+    if(operands[0]->usersNum() == 0)
+        delete operands[0];
+    operands[1]->removeUse(this);
+}
+
+void CopyInstruction::output() const {
+    // IR不输出copy
+}
+
 //==================MachineCode==========================//
 MachineOperand* Instruction::genMachineOperand(Operand* ope)
 {
@@ -1492,4 +1513,23 @@ void GetElementPtrInstruction::genMachineCode(AsmBuilder* builder){
 }
 
 void PhiInstruction::genMachineCode(AsmBuilder* builder){
+    //PHI是IR出ASM不出
+}
+
+void CopyInstruction::genMachineCode(AsmBuilder* builder){
+    MachineBlock* cur_block = builder->getBlock();
+    MachineInstruction* cur_inst = nullptr;
+
+    auto dst = operands[0];
+    auto src = operands[1];
+    if(src != dst){
+        auto dstM = genMachineOperand(dst);
+        auto srcM = genMachineOperand(src);
+        if(dst->getType()->isInt()){
+            cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dstM, srcM);
+        }else if(dst->getType()->isFloat()){
+            cur_inst = new MovMInstruction(cur_block, MovMInstruction::VMOVF32, dstM, srcM);
+        }
+        cur_block->InsertInst(cur_inst);
+    }
 }

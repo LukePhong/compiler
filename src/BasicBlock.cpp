@@ -37,6 +37,22 @@ void BasicBlock::insertBefore(Instruction *dst, Instruction *src)
     dst->setParent(this);
 }
 
+void BasicBlock::insertBackBeforeCompAndBr(Instruction * inst){
+    Instruction* temp;
+    temp = this->rbegin();
+    // 避免死循环！
+    while(temp->isCmp() || temp->isUncond() || temp->isCond()){
+        temp = temp->getPrev();
+    }
+    auto src = temp->getNext();
+    temp->setNext(inst);
+    src->setPrev(inst);
+    inst->setPrev(temp);
+    inst->setNext(src);
+
+    inst->setParent(this);
+}
+
 // remove the instruction from intruction list.
 void BasicBlock::remove(Instruction *inst)
 {
